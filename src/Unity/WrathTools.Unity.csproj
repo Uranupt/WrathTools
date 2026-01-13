@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+		<LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\WrathTools.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.PhysicsModule.dll</HintPath>
+		</Reference>
+
+		<Reference Include="UnityEngine.AIModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.AIModule.dll</HintPath>
+		</Reference>
+
+		<Reference Include="UnityEngine.TextRenderingModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.TextRenderingModule.dll</HintPath>
+		</Reference>
+
+		<Reference Include="UnityEngine.UIElementsModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.UIElementsModule.dll</HintPath>
+		</Reference>
+
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(UnityEditorPath)\UnityEngine.IMGUIModule.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+</Project>
