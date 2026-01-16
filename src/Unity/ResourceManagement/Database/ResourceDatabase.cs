@@ -19,7 +19,7 @@ namespace WrathTools.Unity.ResourceManagement
     public static event Action AutoUpdateTurnedOn;
 
     [SerializeField, HideInInspector] private string _folder = "ResourceDatabase"; //TODO: Move this to a Setting users can change and set up migration when it does
-    [SerializeReference, HideInInspector] private List<ResourceLibrary> _libraries = new();
+    [SerializeField, HideInInspector] private List<ResourceLibrary> _libraries = new();
 
     [SerializeField, HideInInspector] private bool _lastAutoUpdate = true;
 
@@ -167,7 +167,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetLibrary(typeName, out ResourceLibrary resl))
       {
-        throw new Exception($"No ResourceLibrary for the ResourceObject Type '{typeName}' was found in the ResourceDatabase.");
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception($"No ResourceLibrary for the ResourceObject Type '{typeName}' was found in the ResourceDatabase.")
+        );
+        resl = Diagnostics.ThrowOrDefault<ResourceLibrary>(error);
       }
       return resl;
     }
@@ -176,7 +179,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetLibrary(id, out ResourceLibrary resl))
       {
-        throw new Exception($"No ResourceLibrary for the ID '{id.ToIDString(true)}' was found in the ResourceDatabase");
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception($"No ResourceLibrary for the ID '{id.ToIDString(true)}' was found in the ResourceDatabase")
+        );
+        resl = Diagnostics.ThrowOrDefault<ResourceLibrary>(error);
       }
       return resl;
     }

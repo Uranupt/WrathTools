@@ -48,7 +48,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
     [InitializeOnLoadMethod]
     private static void Initialize()
     {
-      EditorTools.EnsurePathExists(ResourceDatabase.AssetPath);
+      ResourceFolderEnforcer.EnsureDatabaseFolderExists();
       BuildTypeCache();
       ResourceDatabase.AutoUpdateTurnedOn += Refresh;
       if(ResourceDatabase.Instance.AutoUpdate)

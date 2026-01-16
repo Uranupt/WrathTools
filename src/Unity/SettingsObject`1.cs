@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 
-namespace WrathTools.Unity.ResourceManagement
+namespace WrathTools.Unity
 {
   public abstract class SettingsObject<TSelf> : SettingsObject where TSelf : SettingsObject<TSelf>
   {

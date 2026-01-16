@@ -4,11 +4,16 @@ using UnityEngine;
 namespace WrathTools.Unity.ResourceManagement
 {
 	[CreateAssetMenu(menuName = "ResourceManagement/PrefabBundle")]
-	public class PrefabBundle : ScriptableObject
+	public sealed class PrefabBundle : ScriptableObject
 	{
 
 		[field: SerializeField] public string Name { get; private set; }
 		[SerializeField] private List<PrefabWrapper> _prefabs = new(); //Violating usual conventions for ordering in preference of Serialized display order
+
+		public bool TryGet(string name, out GameObject gameObject)
+		{
+
+		}
 
     public GameObject Get(string name)
 		{
@@ -34,12 +39,14 @@ namespace WrathTools.Unity.ResourceManagement
 			return null;
 		}
 
-		protected void OnValidate()
+		private void OnValidate()
 		{
 			foreach(PrefabWrapper wrapper in _prefabs)
 			{
 				wrapper.Name = wrapper.Prefab.name;
 			}
 		}
+
+
 	}
 }

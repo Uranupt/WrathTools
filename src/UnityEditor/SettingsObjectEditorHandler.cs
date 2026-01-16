@@ -4,10 +4,10 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using WrathTools.Unity.ResourceManagement;
+using WrathTools.Unity;
 
 
-namespace WrathTools.UnityEditor.ResourceManagement
+namespace WrathTools.UnityEditor
 {
   public static class SettingsObjectEditorHandler
   {

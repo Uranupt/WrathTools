@@ -3,7 +3,7 @@
 
 namespace WrathTools.Unity.ResourceManagement
 { 
-  public class ResourceHandle : IDisposable, IBuilder
+  public class ResourceHandle : IDisposable
   {
 
     private readonly bool _validOnCreated;
@@ -11,8 +11,6 @@ namespace WrathTools.Unity.ResourceManagement
 
     public readonly int ID;
     public readonly Type ResourceType;
-
-    public Type BuildType => _buildType;
     public bool Released { get; private set; }
     public bool IsValid => !Released && _validOnCreated;
 
@@ -101,21 +99,6 @@ namespace WrathTools.Unity.ResourceManagement
     }
 
     public void Dispose() => Release();
-
-    public bool TryBuild<T>(out T resl, bool exactType = true) where T : class
-    {
-      if(!IsValid || !typeof(T).TypeMatch(BuildType, exactType))
-      {
-        resl = null;
-        return false;
-      }
-      return Resource.TryBuild<T>(out resl, exactType);
-    }
-
-    public T Build<T>(bool exactType = true) where T : class
-    {
-      return Resource.Build<T>(exactType);
-    }
 
     private void OnPurge()
     {

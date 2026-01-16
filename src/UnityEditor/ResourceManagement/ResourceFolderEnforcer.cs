@@ -205,6 +205,11 @@ namespace WrathTools.UnityEditor.ResourceManagement
       }
     }
 
+    internal static void EnsureDatabaseFolderExists()
+    {
+      TryCatchWrapper(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
+    }
+
     [InitializeOnLoadMethod]
     private static void Initialize()
     {

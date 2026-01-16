@@ -22,7 +22,7 @@ namespace WrathTools.Unity.ResourceManagement
 
     [SerializeField, HideInInspector] private readonly string _resourceTypeName;
     [SerializeField, HideInInspector] private readonly string _buildTypeName;
-    [SerializeReference, HideInInspector] private readonly List<ResourceCollection> _collections = new();
+    [SerializeField, HideInInspector] private readonly List<ResourceCollection> _collections = new();
 
     [SerializeField, ReadOnly] public readonly string Name;
     [SerializeField, HideInInspector] public readonly int Index;

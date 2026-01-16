@@ -3,13 +3,12 @@ using System;
 using System.Reflection;
 
 
-namespace WrathTools.Unity.ResourceManagement
+namespace WrathTools.Unity
 {
   public abstract class SettingsObject : ScriptableObject
   {
 
     public static Func<Type, SettingsObject> GetSettings { get; set; } = t => Resources.Load<SettingsObject>($"{SettingsPath}/{t.Name}");
-    //TODO: Create Settings Provider to choose path and handle placement
     public static string SettingsPath => "SettingsObjects";
 
     public abstract string DisplayName { get; }
@@ -43,9 +42,9 @@ namespace WrathTools.Unity.ResourceManagement
     public abstract void Merge(SettingsObject other);
     public abstract void Unload();
 
-    public bool TryGet<T>(string name, out T resl)
+    public bool TryGetSetting<T>(string name, out T resl)
     {
-      if(TryGetProtected(name, out resl)) { return true; }
+      if(TryGetSettingProtected(name, out resl)) { return true; }
       Type thisType = GetType();
       PropertyInfo property = thisType.GetProperty(name, typeof(T));
       if(property != null)
@@ -62,7 +61,7 @@ namespace WrathTools.Unity.ResourceManagement
       return false;
     }
 
-    protected virtual bool TryGetProtected<T>(string name, out T resl)
+    protected virtual bool TryGetSettingProtected<T>(string name, out T resl)
     {
       resl = default;
       return false;
