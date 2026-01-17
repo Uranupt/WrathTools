@@ -7,10 +7,10 @@ namespace WrathTools.Unity.ResourceManagement
   {
 
     private readonly bool _validOnCreated;
-    private readonly Type _buildType;
 
     public readonly int ID;
     public readonly Type ResourceType;
+    public readonly Type BuildType;
     public bool Released { get; private set; }
     public bool IsValid => !Released && _validOnCreated;
 
@@ -20,11 +20,19 @@ namespace WrathTools.Unity.ResourceManagement
       {
         if(!IsValid)
         {
-          throw new InvalidOperationException("ResourceHandles should not be used while invalid or after being released");
+          DiagnosticContext error = new UnityErrorContext(
+             new InvalidOperationException("ResourceHandles should not be used while invalid or after being released"),
+             stackTrace: new(true)
+          );
+          return Diagnostics.ThrowOrDefault<ResourceObject>(error);
         }
         if(!TryGetResource(out ResourceObject resl))
         {
-          throw new Exception($"Failed to find resource with ID: {ID} and Type: {ResourceType}");
+          DiagnosticContext error = new UnityErrorContext(
+            new Exception($"Failed to find resource with ID: {ID} and Type: {ResourceType}"),
+            stackTrace: new(true)
+          );
+          Diagnostics.Log(error);
         }
         return resl;
       }
@@ -42,7 +50,7 @@ namespace WrathTools.Unity.ResourceManagement
       }
       ID = id;
       ResourceID.TryGetResourceType(id, out ResourceType);
-      ResourceID.TryGetBuildType(id, out _buildType);
+      ResourceID.TryGetBuildType(id, out BuildType);
       ResourceCache.LogHandle(id);
       ResourceCache.Purged += OnPurge;
     }
@@ -79,13 +87,13 @@ namespace WrathTools.Unity.ResourceManagement
 
     public ResourceHandle Duplicate()
     {
-      if(!_validOnCreated)
+      if(!IsValid)
       {
-        throw new InvalidOperationException("Cannot duplicate invalid ResourceHandles.");
-      }
-      if(Released)
-      {
-        throw new InvalidOperationException("Cannot duplicate released ResourceHandles.");
+        DiagnosticContext error = new UnityErrorContext(
+          new InvalidOperationException($"Cannot duplicate an invalid ResourceHandle. Valid On Creation: {_validOnCreated}, Released: {Released}"),
+          stackTrace: new(true)
+        );
+        return Diagnostics.ThrowOrDefault<ResourceHandle>(error);
       }
       return new ResourceHandle(ID);
     }

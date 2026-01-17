@@ -44,11 +44,7 @@ namespace WrathTools.Unity
         }
         case DiagnosticType.Error:
         {
-          if(!context.TryGetException(out Exception e))
-          {
-            e = new Exception(context.Message);
-          }
-          Debug.LogException(e);
+          Debug.LogError(context.Message);
           if(ThrowErrors) { return DiagnosticResponse.Accessed; }
           break;
         }
@@ -63,7 +59,7 @@ namespace WrathTools.Unity
 
     private static ContextType GetContextType(Type type)
     {
-      if(type == typeof(UnityErrorContext) || type == typeof(UnityWarningContext) || type == typeof(UnityMessageContext))
+      if(typeof(UnityDiagnosticContext).IsAssignableFrom(type))
       {
         return ContextType.Unity;
       }

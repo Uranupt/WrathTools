@@ -168,9 +168,10 @@ namespace WrathTools.Unity.ResourceManagement
       if(!TryGetLibrary(typeName, out ResourceLibrary resl))
       {
         DiagnosticContext error = new UnityErrorContext(
-          new Exception($"No ResourceLibrary for the ResourceObject Type '{typeName}' was found in the ResourceDatabase.")
+          new Exception($"No ResourceLibrary for the ResourceObject Type '{typeName}' was found in the ResourceDatabase."),
+          stackTrace: new(true)
         );
-        resl = Diagnostics.ThrowOrDefault<ResourceLibrary>(error);
+        Diagnostics.Log(error);
       }
       return resl;
     }
@@ -180,9 +181,10 @@ namespace WrathTools.Unity.ResourceManagement
       if(!TryGetLibrary(id, out ResourceLibrary resl))
       {
         DiagnosticContext error = new UnityErrorContext(
-          new Exception($"No ResourceLibrary for the ID '{id.ToIDString(true)}' was found in the ResourceDatabase")
+          new Exception($"No ResourceLibrary for the ID '{id.ToIDString(true)}' was found in the ResourceDatabase"),
+          stackTrace: new(true)
         );
-        resl = Diagnostics.ThrowOrDefault<ResourceLibrary>(error);
+        Diagnostics.Log(error);
       }
       return resl;
     }
@@ -288,8 +290,11 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(_libraries.Count >= ResourceID.MaxLibraries)
       {
-        Debug.LogError($"Cannot create a new ResourceLibrary for ResourceObject Type '{resourceType.Name}', " +
-          $"the Database already has {ResourceID.MaxLibraries} indicies. You will need to Rebuild the Database.");
+        DiagnosticContext warning = new UnityWarningContext(
+          $"Cannot create a new ResourceLibrary for ResourceObject Type '{resourceType.Name}', " +
+            $"the Database already has {ResourceID.MaxLibraries} indicies. You will need to Rebuild the Database."
+        );
+        Diagnostics.Log(warning);
         return;
       }
       _libraries.Add(new ResourceLibrary(resourceType, buildType, _libraries.Count));

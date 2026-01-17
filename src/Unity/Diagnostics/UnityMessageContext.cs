@@ -1,11 +1,17 @@
-﻿
+﻿using System.Diagnostics;
+
 
 namespace WrathTools.Unity
 {
-  public sealed class UnityMessageContext : DiagnosticContext
+  public sealed class UnityMessageContext : UnityDiagnosticContext
   {
 
-    public UnityMessageContext(string message) : base(message, DiagnosticType.Message)
+    public static void Log(string message, StackTrace stackTrace = null)
+    {
+      Diagnostics.Log(new UnityMessageContext(message, stackTrace));
+    }
+
+    public UnityMessageContext(string message, StackTrace stackTrace = null) : base(message, DiagnosticType.Message, stackTrace)
     {
 
     }

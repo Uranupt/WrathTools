@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.AI;
 using System.IO;
+using System.Linq;
 
 namespace WrathTools.Unity
 {
@@ -11,7 +12,6 @@ namespace WrathTools.Unity
 
 		public static RaycastHit[] RaycastBuffer = new RaycastHit[200];
 		public static Collider[] ColliderBuffer = new Collider[200];
-		public static System.Diagnostics.Stopwatch Stopwatch = new();
 
 		public static Vector2 Abs(this Vector2 vector)
 		{
@@ -90,7 +90,7 @@ namespace WrathTools.Unity
 		/// Must be a MonoBehaviour.
 		/// Not recommended if Component requires Inspector assigned fields.
 		/// </summary>
-		public static T LazyBuild<T>(this GameObject obj, ref T field) where T : MonoBehaviour
+		public static T LazyOrBuild<T>(this GameObject obj, ref T field) where T : MonoBehaviour
 		{
 			if(field == null)
 			{
@@ -105,57 +105,35 @@ namespace WrathTools.Unity
 		/// <summary>
 		/// Lazy helper for Components. Will throw or log warning if it's missing, and return null if throwing is not allowed.
 		/// </summary>
-		public static T Lazy<T>(this GameObject obj, ref T field, bool allowThrow = false) where T : Component
+		public static T Lazy<T>(this GameObject obj, ref T field) where T : Component
 		{
 			if(field == null)
 			{
 				if(!obj.TryGetComponent(out field))
 				{
-					if(allowThrow)
-					{
-						throw new Exception("Missing expected component of type: " + typeof(T).Name);
-					}
-					Debug.LogWarning("Missing expected component of type: " + typeof(T).Name + ", throwing was not allowed, null value returned.");
-					return null;
+					DiagnosticContext error = new UnityErrorContext(
+						new Exception($"The provided GameObject was missing the expected Component of Type '{typeof(T).Name}'"),
+						stackTrace: new(true)
+					);
+					field = Diagnostics.ThrowOrDefault<T>(error);
 				}
 			}
 			return field;
 		}
 
-		public static T LazyFromScene<T>(ref T field, Func<T, bool> predicate = null, bool allowThrow = false) where T : Component
+		public static T LazyFromScene<T>(ref T field, Func<T, bool> predicate = null) where T : Component
 		{
 			if(field == null)
 			{
-				T HandleEmpty()
-				{
-					if(allowThrow)
-					{
-						throw new Exception("Missing expected component of type: " + typeof(T).Name);
-					}
-					Debug.LogWarning("Missing expected component of type: " + typeof(T).Name + ", throwing was not allowed, null value returned.");
-					return null;
-				}
-
 				T[] objects = UnityEngine.Object.FindObjectsByType<T>(FindObjectsSortMode.InstanceID);
-				if(objects.Length == 0)
+				field = predicate != null ? objects.FirstOrDefault(predicate) : objects.FirstOrDefault();
+				if(field == null)
 				{
-					return HandleEmpty();
-				}
-				if(predicate != null)
-				{
-					foreach(T item in objects)
-					{
-						if(predicate.Invoke(item))
-						{
-							field = item;
-							return field;
-						}
-					}
-					return HandleEmpty();
-				}
-				else
-				{
-					field = objects[0];
+					DiagnosticContext error = new UnityErrorContext(
+						new Exception($"No Component of  Type '{typeof(T).Name}' matching the provdid predicate was found in the Scene"),
+						stackTrace: new(true)
+					);
+					Diagnostics.Log(error);
 				}
 			}
 			return field;

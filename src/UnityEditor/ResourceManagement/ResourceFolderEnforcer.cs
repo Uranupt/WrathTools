@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using UnityEditor;
 using UnityEngine;
 using WrathTools.Unity.ResourceManagement;
+using WrathTools.Unity;
 
 
 namespace WrathTools.UnityEditor.ResourceManagement
@@ -67,7 +68,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
           {
             Debug.LogError($"The ResourceLibrary for the new Collection folder at '{pathAnalysis.FullPath}' could not be found in the Database." +
               $" New Collection folder will be deleted. If issue persists, Database rebuild is recommended.");
-            TryCatchWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+            Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
             return;
           }
           if(pathAnalysis.Library.IndicesCount >= ResourceID.MaxCollections)
@@ -78,14 +79,14 @@ namespace WrathTools.UnityEditor.ResourceManagement
           else
           {
             Debug.LogError(pathAnalysis.Library.GetIndexOverflowMessage(pathAnalysis.DeepestFolder));
-            TryCatchWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+            Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           }
           break;
         }
         default:
         {
           Debug.LogError($"New folder at '{pathAnalysis.FullPath}' created at an invalid depth. Only Collections (subfolders of Libraries) can be manually created.");
-          TryCatchWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+          Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           break;
         }
       }
@@ -207,7 +208,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
     internal static void EnsureDatabaseFolderExists()
     {
-      TryCatchWrapper(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
+      Try(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
     }
 
     [InitializeOnLoadMethod]
@@ -224,19 +225,10 @@ namespace WrathTools.UnityEditor.ResourceManagement
       _ignore = false;
     }
 
-    private static bool TryCatchWrapper(Action action)
+    private static bool Try(Action action)
     {
-      try
-      {
-        IgnoreWrapper(action);
-        return true;
-      }
-      catch(Exception e)
-      {
-        Debug.LogException(e);
-        _ignore = false;
-        return false;
-      }
+      _ignore = true;
+      return Diagnostics.Try(action, e => new UnityErrorContext(e, stackTrace: new(true)), onFinally: () => _ignore = false);
     }
 
     private static string[] GetFolders(Type type)
@@ -253,7 +245,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
       string path = $"{ResourceDatabase.AssetPath}/{type.Name}";
       if(!AssetDatabase.IsValidFolder(path))
       {
-        TryCatchWrapper(() => AssetDatabase.CreateFolder(ResourceDatabase.AssetPath, type.Name));
+        Try(() => AssetDatabase.CreateFolder(ResourceDatabase.AssetPath, type.Name));
       }
     }
 
@@ -295,7 +287,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
     private static void DelayedAddCollection(ResourceLibrary library, string name)
     {
-      if(TryCatchWrapper(() => library?.AddCollection(name)))
+      if(Try(() => library?.AddCollection(name)))
       {
         EditorUtility.SetDirty(ResourceDatabase.Instance);
         AssetDatabase.SaveAssetIfDirty(ResourceDatabase.Instance);

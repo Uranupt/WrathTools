@@ -36,9 +36,9 @@ namespace WrathTools.Unity.ResourceManagement
 			return false;
 		}
 
-		public static bool TryGet<T>(string name, out T component) where T : Component
+		public static bool TryGet<T>(out T component, string name = null) where T : Component
 		{
-			if(Instance.TryRetrieve(name, out T comp))
+			if(Instance.TryRetrieve(name ?? typeof(T).Name, out T comp))
 			{
 				component = GameObject.Instantiate(comp);
 				return true;
@@ -47,9 +47,9 @@ namespace WrathTools.Unity.ResourceManagement
 			return false;
 		}
 
-		public static bool TryGetTemp<T>(string name, out TempComponent<T> tempComponent) where T : Component
+		public static bool TryGetTemp<T>(out TempComponent<T> tempComponent, string name = null) where T : Component
 		{
-			if(Instance.TryRetrieve(name, out T comp))
+			if(Instance.TryRetrieve(name ?? typeof(T).Name, out T comp))
 			{
 				tempComponent = new TempComponent<T>(comp);
 				return true;
@@ -60,42 +60,49 @@ namespace WrathTools.Unity.ResourceManagement
 
 		public static GameObject Get(string name)
 		{
-			if(TryGet(name, out GameObject obj))
+			if(!TryGet(name, out GameObject obj))
 			{
-				return obj;
+        DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
+        Diagnostics.Log(error);
 			}
-			DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"));
-			return Diagnostics.ThrowOrDefault<GameObject>(error);
-		}
+      return obj;
+    }
 
 		public static TempGameObject GetTemp(string name)
 		{
-			if(TryGetTemp(name, out TempGameObject obj))
+			if(!TryGetTemp(name, out TempGameObject obj))
 			{
-				return obj;
-			}
-      DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"));
-      return Diagnostics.ThrowOrDefault<TempGameObject>(error);
+        DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
+        Diagnostics.Log(error);
+      }
+      return obj;
     }
 
-		public static T Get<T>(string name) where T : Component
+		public static T Get<T>(string name = null) where T : Component
 		{
-			if(TryGet(name, out T comp))
+			if(!TryGet(out T comp, name))
 			{
-				return comp;
+				DiagnosticContext error = new UnityErrorContext(
+					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
+					stackTrace: new(true)
+				);
+				Diagnostics.Log(error);
 			}
-			DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"));
-			return Diagnostics.ThrowOrDefault<T>(error);
+      return comp;
+
 		}
 
-		public static TempComponent<T> GetTemp<T>(string name) where T : Component
+		public static TempComponent<T> GetTemp<T>(string name = null) where T : Component
 		{
-			if(TryGetTemp(name, out TempComponent<T> comp))
+			if(!TryGetTemp(out TempComponent<T> comp, name))
 			{
-				return comp;
+				DiagnosticContext error = new UnityErrorContext(
+					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
+					stackTrace: new(true)
+				);
+				Diagnostics.Log(error);
 			}
-      DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"));
-      return Diagnostics.ThrowOrDefault<TempComponent<T>>(error);
+      return comp;
     }
 
     public override void Merge(Prefabs other)

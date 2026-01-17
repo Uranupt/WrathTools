@@ -12,31 +12,27 @@ namespace WrathTools.Unity.ResourceManagement
 
 		public bool TryGet(string name, out GameObject gameObject)
 		{
-
-		}
-
-    public GameObject Get(string name)
-		{
 			foreach(PrefabWrapper wrapper in _prefabs)
 			{
 				if(wrapper.Name == name)
 				{
-					return wrapper.Prefab;
+					gameObject = wrapper.Prefab;
+					return true;
 				}
 			}
-			return null;
+			gameObject = null;
+			return false;
 		}
 
-    public T Get<T>(string name) where T : MonoBehaviour
+		public bool TryGet<T>(out T component, string name = null) where T : Component
 		{
-			foreach(PrefabWrapper wrapper in _prefabs)
+			name ??= typeof(T).Name;
+			if(TryGet(name, out GameObject obj))
 			{
-				if(wrapper.Name == name && wrapper.Prefab.TryGetComponent<T>(out T component))
-				{
-					return component;
-				}
+				return obj.TryGetComponent(out component);
 			}
-			return null;
+			component = null;
+			return false;
 		}
 
 		private void OnValidate()

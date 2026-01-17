@@ -19,11 +19,15 @@ namespace WrathTools.Unity.ResourceManagement
 
     public T GetItem<T>(string name, bool exactType = true)
     {
-      if(TryGetItem(name, out T item, exactType))
+      if(!TryGetItem(name, out T item, exactType))
       {
-        return item;
+        DiagnosticContext error = new UnityErrorContext(
+          new KeyNotFoundException($"No field matching the name or alias {name} was found."),
+          stackTrace: new(true)
+        );
+        Diagnostics.Log(error);
       }
-      throw new KeyNotFoundException($"No field matching the name or alias {name} was found.");
+      return item;
     }
 
   }

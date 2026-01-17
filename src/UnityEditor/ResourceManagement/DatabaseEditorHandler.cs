@@ -61,8 +61,10 @@ namespace WrathTools.UnityEditor.ResourceManagement
       }
       else if(ResourceDatabase.Instance.WarnWhenUpdateIsOff)
       {
-        Debug.LogWarning("ResourceDatabase's 'Auto Update' feature is turned off. You must manually update with the menu command WrathTools/Database/Refresh Database."
-          + " You can disable this warning by unchecking 'Warn When Update Is Off' in the Database settings.");
+        UnityWarningContext.Log(
+          "ResourceDatabase's 'Auto Update' feature is turned off. You must manually update with the menu command WrathTools/Database/Refresh Database."
+          + " You can disable this warning by unchecking 'Warn When Update Is Off' in the Database settings."
+        );
       }
     }
 
@@ -101,14 +103,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
     private static void WriteToPath(string path)
     {
-      try
-      {
-        Serialization.WriteToFile(ResourceDatabase.Instance, Path.Combine(path, "ResourceDatabase.txt"));
-      }
-      catch(Exception e)
-      {
-        Debug.LogError(e);
-      }
+      Serialization.WriteToFile(ResourceDatabase.Instance, Path.Combine(path, "ResourceDatabase.txt"));
     }
 
   }

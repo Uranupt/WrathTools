@@ -91,7 +91,11 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetResourcePeek(id, out ResourcePeek peek))
       {
-        throw new Exception($"No ResourceObject with the ID '{id.ToIDString(true)}' was found in the ResourceCollection '{Library.Name}/{Name}'");
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception($"No ResourceObject with the ID '{id.ToIDString(true)}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
+          stackTrace: new(true)
+        );
+        Diagnostics.Log(error);
       }
       return peek;
     }
@@ -100,7 +104,11 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetResourcePeek(name, out ResourcePeek peek))
       {
-        throw new Exception($"No ResourceObject with the name '{name}' was found in the ResourceCollection '{Library.Name}/{Name}'");
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception($"No ResourceObject with the name '{name}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
+          stackTrace: new(true)
+        );
+        Diagnostics.Log(error);
       }
       return peek;
     }

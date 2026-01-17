@@ -25,7 +25,11 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryBuild(out TResl resl, exactType))
       {
-        throw new InvalidCastException($"Cannot cast from Type {BuildType.Name} to Type {typeof(TResl).Name}");
+        DiagnosticContext error = new UnityErrorContext(
+          new InvalidCastException($"Cannot cast from Type {BuildType.Name} to Type {typeof(TResl).Name}"),
+          stackTrace: new(true)
+        );
+        Diagnostics.Log(error);
       }
       return resl;
     }

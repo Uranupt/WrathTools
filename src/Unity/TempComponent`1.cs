@@ -42,12 +42,18 @@ namespace WrathTools.Unity
 
     public new T Instantiate(Transform parent = null)
     {
-      if(TryInstantiate(out T resl, parent))
+      if(!TryInstantiate(out T resl, parent))
       {
-        return resl;
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception("Cannot create an instance of a null, destroyed, or moved GameObject"),
+          stackTrace: new(true)
+        );
+        resl = Diagnostics.ThrowOrDefault<T>(error);
       }
-      throw new Exception("Cannot create an instance of a null, destroyed, or moved GameObject");
+      return resl;
     }
+
+    public GameObject InstantiateGameObject(Transform parent = null) => base.Instantiate(parent);
 
   }
 }

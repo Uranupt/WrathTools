@@ -16,6 +16,7 @@ namespace WrathTools.Unity
         if(_container == null)
         {
           _container = new GameObject("TempGameObject Container");
+          _container.hideFlags = HideFlags.HideAndDontSave;
           _container.SetActive(false);
         }
         return _container;
@@ -65,11 +66,15 @@ namespace WrathTools.Unity
 
     public GameObject Instantiate(Transform parent = null)
     {
-      if(IsValid)
+      if(!TryInstantiate(out GameObject resl, parent))
       {
-        return GameObject.Instantiate(_gameObject, parent);
+        DiagnosticContext error = new UnityErrorContext(
+          new Exception("Cannot create an instance of a null, destroyed, or moved GameObject"),
+          stackTrace: new(true)
+        );
+        resl = Diagnostics.ThrowOrDefault<GameObject>(error);
       }
-      throw new Exception("Cannot create an instance of a null, destroyed, or moved GameObject");
+      return resl;
     }
 
   }

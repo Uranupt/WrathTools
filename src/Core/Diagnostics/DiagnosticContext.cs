@@ -6,43 +6,33 @@ namespace WrathTools
 {
   public abstract class DiagnosticContext
   {
-
-    protected Exception _exception;
-
-    public bool PrintStackTrace;
     public virtual string Message { get; protected set; }
     public virtual DiagnosticType DiagnosticType { get; protected set; }
-    public virtual bool HasException => _exception != null;
-    public virtual StackTrace StackTrace { get; protected set; }
-
+    public virtual Exception Exception { get; protected set;  }
     protected DiagnosticContext(string message, DiagnosticType type, StackTrace stackTrace = null)
     {
       CommonConstruction(message, type, stackTrace);
     }
 
-    protected DiagnosticContext(Exception exception, DiagnosticType type, StackTrace stackTrace = null)
+    protected DiagnosticContext(Exception exception, DiagnosticType type, string message = null, StackTrace stackTrace = null)
     {
-      CommonConstruction(exception.Message, type, stackTrace);
-      _exception = exception;
+      CommonConstruction(message ?? exception.Message, type, stackTrace);
+      Exception = exception;
     }
 
-    protected DiagnosticContext(Exception exception, string message, DiagnosticType type, StackTrace stackTrace = null)
+    protected void AppendStackTrace(StackTrace stackTrace)
     {
-      CommonConstruction(message, type, stackTrace);
-      _exception = exception;
-    }
-
-    public bool TryGetException(out Exception exception)
-    {
-      exception = _exception;
-      return HasException;
+      Message = Message + "\n" + Diagnostics.WriteStackTrace(stackTrace);
     }
 
     private void CommonConstruction(string message, DiagnosticType type, StackTrace stackTrace)
     {
       Message = message;
       DiagnosticType = type;
-      StackTrace = stackTrace;
+      if(stackTrace != null)
+      {
+        AppendStackTrace(stackTrace);
+      }
     }
 
   }

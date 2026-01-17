@@ -30,10 +30,7 @@ namespace WrathTools
       if(handled) { return; }
       if(context.DiagnosticType == DiagnosticType.Error)
       {
-        if(!context.TryGetException(out Exception e))
-        {
-          e = new Exception(context.Message);
-        }
+        Exception e = context.Exception ?? new Exception(context.Message);
         throw e;
       }
       else
@@ -48,34 +45,27 @@ namespace WrathTools
       return default;
     }
 
-    public static bool Try(Action action, Func<Exception, DiagnosticContext> contextBuilder = null)
+    public static bool Try(Action action, Func<Exception, DiagnosticContext> contextBuilder = null, 
+      Action<Exception> onCatch = null, Action onFinally = null)
     {
       contextBuilder ??= e => new ErrorContext(e);
+      bool resl;
       try
       {
         action.Invoke();
-        return true;
+        resl = true;
       }
       catch(Exception e)
       {
+        onCatch?.Invoke(e);
         Log(contextBuilder.Invoke(e));
-        return false;
+        resl = false;
       }
-    }
-
-    public static bool Try<T>(Func<T> func, out T resl, Func<Exception, DiagnosticContext> contextBuilder = null)
-    {
-      contextBuilder ??= e => new ErrorContext(e);
-      try
+      finally
       {
-        resl = func.Invoke();
-        return true;
+        onFinally?.Invoke();
       }
-      catch(Exception e)
-      {
-        resl = ThrowOrDefault<T>(contextBuilder.Invoke(e));
-        return false;
-      }
+      return resl;
     }
 
     public static string WriteStackTrace(StackTrace stackTrace)
