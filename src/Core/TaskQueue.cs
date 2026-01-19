@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 
 
-namespace WrathTools.Unity
+namespace WrathTools
 {
   public sealed class TaskQueue
   {
@@ -20,16 +19,11 @@ namespace WrathTools.Unity
 
     public void Clear() => _queue.Clear();
 
-    public async void Run(Action onDone = null)
+    public async Task Run(Action onDone = null)
     {
       if(_running) { return; }
-      await RunAwaitable();
-      onDone?.Invoke();
-    }
-
-    private async Task RunAwaitable()
-    {
       _running = true;
+      List<Exception> exceptions = new();
       while(_queue.Count > 0)
       {
         Func<Task> task = _queue.Dequeue();
@@ -39,9 +33,11 @@ namespace WrathTools.Unity
         }
         catch(Exception e)
         {
-          Debug.LogException(e);
+          Diagnostics.LogError(e);
         }
       }
+      _running = false;
+      onDone?.Invoke();
     }
 
   }

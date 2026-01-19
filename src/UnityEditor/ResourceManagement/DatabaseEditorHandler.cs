@@ -1,11 +1,10 @@
 ﻿using System.IO;
-using System.Text;
 using UnityEditor;
-using UnityEngine;
 using System.Linq;
 using System;
 using System.Collections.Generic;
 using WrathTools.Unity.ResourceManagement;
+using WrathTools.Unity;
 
 
 namespace WrathTools.UnityEditor.ResourceManagement
@@ -61,7 +60,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
       }
       else if(ResourceDatabase.Instance.WarnWhenUpdateIsOff)
       {
-        UnityWarningContext.Log(
+        UnityDiagnostics.LogWarning(
           "ResourceDatabase's 'Auto Update' feature is turned off. You must manually update with the menu command WrathTools/Database/Refresh Database."
           + " You can disable this warning by unchecking 'Warn When Update Is Off' in the Database settings."
         );

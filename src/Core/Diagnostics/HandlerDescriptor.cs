@@ -6,13 +6,13 @@ namespace WrathTools
   internal sealed class HandlerDescriptor
   {
 
-    public readonly DiagnosticHandlerScope Scope;
-    public readonly Func<DiagnosticContext, bool, DiagnosticResponse> Handle;
+    public readonly DiagnosticHandlerFocus Focus;
+    public readonly Func<DiagnosticContext, bool, DiagnosticResponse> HandleDiagnostic;
 
-    public HandlerDescriptor(DiagnosticHandlerScope scope, Func<DiagnosticContext, bool, DiagnosticResponse> handle)
+    public HandlerDescriptor(DiagnosticHandlerFocus focus, Func<DiagnosticContext, bool, DiagnosticResponse> handleDiagnostic)
     {
-      Scope = scope;
-      Handle = handle;
+      Focus = focus;
+      HandleDiagnostic = handleDiagnostic;
     }
 
   }

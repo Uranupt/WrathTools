@@ -2,7 +2,7 @@
 
 namespace WrathTools
 {
-  public enum DiagnosticHandlerScope
+  public enum DiagnosticHandlerFocus
   {
     Targeted,
     Module,

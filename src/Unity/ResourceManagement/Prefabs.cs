@@ -62,8 +62,7 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGet(name, out GameObject obj))
 			{
-        DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
-        Diagnostics.Log(error);
+        UnityDiagnostics.LogError(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
 			}
       return obj;
     }
@@ -72,8 +71,7 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGetTemp(name, out TempGameObject obj))
 			{
-        DiagnosticContext error = new UnityErrorContext(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
-        Diagnostics.Log(error);
+        UnityDiagnostics.LogError(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
       }
       return obj;
     }
@@ -82,11 +80,10 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGet(out T comp, name))
 			{
-				DiagnosticContext error = new UnityErrorContext(
+				UnityDiagnostics.LogError(
 					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
 					stackTrace: new(true)
 				);
-				Diagnostics.Log(error);
 			}
       return comp;
 
@@ -96,11 +93,10 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGetTemp(out TempComponent<T> comp, name))
 			{
-				DiagnosticContext error = new UnityErrorContext(
+				UnityDiagnostics.LogError(
 					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
 					stackTrace: new(true)
 				);
-				Diagnostics.Log(error);
 			}
       return comp;
     }

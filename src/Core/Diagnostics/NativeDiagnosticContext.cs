@@ -2,31 +2,31 @@
 using System;
 
 
-namespace WrathTools.Unity
+namespace WrathTools
 {
-  public sealed class UnityDiagnosticContext : DiagnosticContext
+  public sealed class NativeDiagnosticContext : DiagnosticContext
   {
 
-    public static UnityDiagnosticContext NewMessage(string message, string id = null, StackTrace stackTrace = null,
+    public static NativeDiagnosticContext NewMessage(string message, string id = null, StackTrace stackTrace = null,
       DiagnosticSourceInfo sourceInfo = null)
     {
-      UnityDiagnosticContext context = new();
+      NativeDiagnosticContext context = new();
       context.InitializeMessage(message, id, stackTrace, sourceInfo);
       return context;
     }
 
-    public static UnityDiagnosticContext NewWarning(string message, string id = null, StackTrace stackTrace = null,
+    public static NativeDiagnosticContext NewWarning(string message, string id = null, StackTrace stackTrace = null,
       DiagnosticSourceInfo sourceInfo = null)
     {
-      UnityDiagnosticContext context = new();
+      NativeDiagnosticContext context = new();
       context.InitializeWarning(message, id, stackTrace, sourceInfo);
       return context;
     }
 
-    public static UnityDiagnosticContext NewError(Exception exception, string message = null, string id = null,
+    public static NativeDiagnosticContext NewError(Exception exception, string message = null, string id = null, 
       StackTrace stackTrace = null, DiagnosticSourceInfo sourceInfo = null)
     {
-      UnityDiagnosticContext context = new();
+      NativeDiagnosticContext context = new();
       context.InitializeError(exception, message, id, stackTrace, sourceInfo);
       return context;
     }
@@ -49,7 +49,7 @@ namespace WrathTools.Unity
       Diagnostics.Log(NewError(exception, message, id, stackTrace, sourceInfo));
     }
 
-    private UnityDiagnosticContext()
+    private NativeDiagnosticContext()
     {
 
     }

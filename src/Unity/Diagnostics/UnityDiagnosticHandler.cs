@@ -7,68 +7,92 @@ namespace WrathTools.Unity
   public sealed class UnityDiagnosticHandler : DiagnosticHandler
   {
 
-    private enum ContextType
+    private enum SourceType
     {
       Other,
       Unity,
       Native
     }
 
-    public static bool Active = true;
-    public static bool ThrowErrors = false;
-    public static bool IgnoreHandled = false;
-    public static bool LogNative = true;
-    public static bool MarkNativeHandled = true;
-    public static bool LogOther = false;
-    public static bool MarkOtherHandled = false;
+    public static DiagnosticHandlerFocus GetHandlerFocus() => DiagnosticHandlerFocus.Application;
 
-    public static DiagnosticHandlerScope GetScope() => DiagnosticHandlerScope.Application;
-
-    public static DiagnosticResponse Handle(DiagnosticContext context, bool isHandled)
+    public static DiagnosticResponse HandleDiagnostic(DiagnosticContext context, bool isHandled)
     {
-      if(!Active || (isHandled && IgnoreHandled)) { return DiagnosticResponse.Ignored; }
-      ContextType contextType = GetContextType(context.GetType());
-      if(contextType == ContextType.Other && !LogOther) { return DiagnosticResponse.Ignored; }
-      if(contextType == ContextType.Native && !LogNative) {  return DiagnosticResponse.Ignored; }
-      switch(context.DiagnosticType)
+      if(!UnityDiagnostics.Options.Has(UnityDiagnosticOptions.Active)
+        || (isHandled && UnityDiagnostics.Options.Has(UnityDiagnosticOptions.IgnoreHandled)))
       {
-        case DiagnosticType.Message:
-        {
-          Debug.Log(context.Message);
-          break;
-        }
-        case DiagnosticType.Warning:
-        {
-          Debug.LogWarning(context.Message);
-          break;
-        }
-        case DiagnosticType.Error:
-        {
-          Debug.LogError(context.Message);
-          if(ThrowErrors) { return DiagnosticResponse.Accessed; }
-          break;
-        }
+        return DiagnosticResponse.Ignored;
       }
-      return contextType switch
+
+      SourceType sourceType = GetSourceType(context.GetType());
+      bool canLog = sourceType switch
       {
-        ContextType.Unity => DiagnosticResponse.Handled,
-        ContextType.Native => MarkNativeHandled ? DiagnosticResponse.Handled : DiagnosticResponse.Accessed,
-        ContextType.Other => MarkOtherHandled ? DiagnosticResponse.Handled : DiagnosticResponse.Accessed
+        SourceType.Unity => true,
+        SourceType.Native => UnityDiagnostics.Options.Has(UnityDiagnosticOptions.LogNativeSources),
+        SourceType.Other => UnityDiagnostics.Options.Has(UnityDiagnosticOptions.LogOtherSources),
+        _ => false
       };
+      bool canHandle = UnityDiagnostics.Options.Has(GetHandleOptions(context.DiagnosticType, sourceType));
+      bool canConsume = canHandle && UnityDiagnostics.Options.Has(GetConsumeOptions(context.DiagnosticType));
+
+      if(canLog)
+      {
+        Log(context.Message, context.DiagnosticType);
+      }
+
+      return canConsume ? DiagnosticResponse.Consumed
+        : canHandle ? DiagnosticResponse.Handled
+        : canLog ? DiagnosticResponse.Accessed
+        : DiagnosticResponse.Ignored;
+
     }
 
-    private static ContextType GetContextType(Type type)
+    private static void Log(string message, DiagnosticType type)
     {
-      if(typeof(UnityDiagnosticContext).IsAssignableFrom(type))
+      Action<string> log = type switch
       {
-        return ContextType.Unity;
-      }
-      if(type == typeof(ErrorContext) || type == typeof(WarningContext) || type == typeof(MessageContext))
-      {
-        return ContextType.Native;
-      }
-      return ContextType.Other;
+        DiagnosticType.Message => Debug.Log,
+        DiagnosticType.Warning => Debug.LogWarning,
+        DiagnosticType.Error => Debug.LogError
+      };
+      log?.Invoke(message);
     }
+
+    private static SourceType GetSourceType(Type type)
+    {
+      if(type == typeof(UnityDiagnosticContext))
+      {
+        return SourceType.Unity;
+      }
+      if(type == typeof(NativeDiagnosticContext))
+      {
+        return SourceType.Native;
+      }
+      return SourceType.Other;
+    }
+
+    private static UnityDiagnosticOptions GetHandleOptions(DiagnosticType type) => type switch
+      {
+        DiagnosticType.Message => UnityDiagnosticOptions.HandleMessages,
+        DiagnosticType.Warning => UnityDiagnosticOptions.HandleWarnings,
+        DiagnosticType.Error => UnityDiagnosticOptions.HandleErrors
+      };
+
+    private static UnityDiagnosticOptions GetHandleOptions(SourceType source) => source switch
+      {
+        SourceType.Unity => UnityDiagnosticOptions.None,
+        SourceType.Native => UnityDiagnosticOptions.HandleNativeSources,
+        SourceType.Other => UnityDiagnosticOptions.HandleOtherSources
+      };
+
+    private static UnityDiagnosticOptions GetHandleOptions(DiagnosticType type, SourceType source) => GetHandleOptions(type) | GetHandleOptions(source);
+
+    private static UnityDiagnosticOptions GetConsumeOptions(DiagnosticType type) => type switch
+      {
+        DiagnosticType.Message => UnityDiagnosticOptions.ConsumeHandledMessages,
+        DiagnosticType.Warning => UnityDiagnosticOptions.ConsumeHandledWarnings,
+        DiagnosticType.Error => UnityDiagnosticOptions.ConsumeHandledErrors
+      };
 
   }
 }

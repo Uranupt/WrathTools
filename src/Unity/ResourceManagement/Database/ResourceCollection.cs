@@ -91,11 +91,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetResourcePeek(id, out ResourcePeek peek))
       {
-        DiagnosticContext error = new UnityErrorContext(
+        UnityDiagnostics.LogError(
           new Exception($"No ResourceObject with the ID '{id.ToIDString(true)}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
           stackTrace: new(true)
         );
-        Diagnostics.Log(error);
       }
       return peek;
     }
@@ -104,11 +103,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetResourcePeek(name, out ResourcePeek peek))
       {
-        DiagnosticContext error = new UnityErrorContext(
+        UnityDiagnostics.LogError(
           new Exception($"No ResourceObject with the name '{name}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
           stackTrace: new(true)
         );
-        Diagnostics.Log(error);
       }
       return peek;
     }
@@ -204,8 +202,8 @@ namespace WrathTools.Unity.ResourceManagement
       }
       else
       {
-        Debug.LogError($"Cannot log ResourceObject with name '{resource.name}' in Collection '{Library.Name}/{Name}'" 
-          + $", it already has {ResourceID.MaxResources} existing indices. Consider a new Collection, or rebuilding the Database to clear removed Resource IDs.");
+        UnityDiagnostics.LogError(new Exception($"Cannot log ResourceObject with name '{resource.name}' in Collection '{Library.Name}/{Name}'" 
+          + $", it already has {ResourceID.MaxResources} existing indices. Consider a new Collection, or rebuilding the Database to clear removed Resource IDs."));
       }
     }
 

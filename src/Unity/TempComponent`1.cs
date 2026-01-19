@@ -44,11 +44,10 @@ namespace WrathTools.Unity
     {
       if(!TryInstantiate(out T resl, parent))
       {
-        DiagnosticContext error = new UnityErrorContext(
+        UnityDiagnostics.LogError(
           new Exception("Cannot create an instance of a null, destroyed, or moved GameObject"),
           stackTrace: new(true)
         );
-        resl = Diagnostics.ThrowOrDefault<T>(error);
       }
       return resl;
     }

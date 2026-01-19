@@ -66,9 +66,9 @@ namespace WrathTools.UnityEditor.ResourceManagement
           if(!ResourceDatabase.Instance.AutoUpdate) { return; }
           if(pathAnalysis.Library == null)
           {
-            Debug.LogError($"The ResourceLibrary for the new Collection folder at '{pathAnalysis.FullPath}' could not be found in the Database." +
+            UnityDiagnostics.LogWarning($"The ResourceLibrary for the new Collection folder at '{pathAnalysis.FullPath}' could not be found in the Database." +
               $" New Collection folder will be deleted. If issue persists, Database rebuild is recommended.");
-            Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+            TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
             return;
           }
           if(pathAnalysis.Library.IndicesCount >= ResourceID.MaxCollections)
@@ -78,15 +78,15 @@ namespace WrathTools.UnityEditor.ResourceManagement
           }
           else
           {
-            Debug.LogError(pathAnalysis.Library.GetIndexOverflowMessage(pathAnalysis.DeepestFolder));
-            Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+            UnityDiagnostics.LogWarning(pathAnalysis.Library.GetIndexOverflowMessage(pathAnalysis.DeepestFolder));
+            TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           }
           break;
         }
         default:
         {
-          Debug.LogError($"New folder at '{pathAnalysis.FullPath}' created at an invalid depth. Only Collections (subfolders of Libraries) can be manually created.");
-          Try(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
+          UnityDiagnostics.LogWarning($"New folder at '{pathAnalysis.FullPath}' created at an invalid depth. Only Collections (subfolders of Libraries) can be manually created.");
+          TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           break;
         }
       }
@@ -101,7 +101,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
         case PathType.Database:
         case PathType.Library:
         {
-          Debug.LogError($"Users should not manually delete the Database or Library folder at '{pathAnalysis.FullPath}'");
+          UnityDiagnostics.LogWarning($"Users should not manually delete the Database or Library folder at '{pathAnalysis.FullPath}'");
           return AssetDeleteResult.FailedDelete;
         }
         case PathType.Collection:
@@ -126,7 +126,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
         || oldPathAnalysis.PathType == PathType.Library
         || newPathAnalysis.PathType == PathType.Library)
       {
-        Debug.LogError($"Users should not manually move the Database or Library folders. Prevented folder at '{oldPathAnalysis.FullPath}'" +
+        UnityDiagnostics.LogWarning($"Users should not manually move the Database or Library folders. Prevented folder at '{oldPathAnalysis.FullPath}'" +
           $" from moving to '{newPathAnalysis.FullPath}'");
         return AssetMoveResult.FailedMove;
       }
@@ -139,7 +139,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
       if(newPathAnalysis.PathType == PathType.Subcollection)
       {
-        Debug.LogError($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
+        UnityDiagnostics.LogWarning($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
           $"ResourceCollection folders cannot have subfolders.");
         return AssetMoveResult.FailedMove;
       }
@@ -148,7 +148,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
       {
         if(analysisResult.Library != null && analysisResult.Library.IndicesCount >= ResourceID.MaxCollections)
         {
-          Debug.LogError($"Cannot move folder to {analysisResult.FullPath}, the Library cannot log any new Collections.");
+          UnityDiagnostics.LogWarning($"Cannot move folder to {analysisResult.FullPath}, the Library cannot log any new Collections.");
           return false;
         }
         return true;
@@ -166,7 +166,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
         {
           if(oldPathAnalysis.HasSubfolders)
           {
-            Debug.LogError($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
+            UnityDiagnostics.LogWarning($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
               $"folder contains subfolders and destination is a ResourceCollection path.");
             return AssetMoveResult.FailedMove;
           }
@@ -208,7 +208,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
     internal static void EnsureDatabaseFolderExists()
     {
-      Try(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
+      TryWrapper(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
     }
 
     [InitializeOnLoadMethod]
@@ -218,17 +218,24 @@ namespace WrathTools.UnityEditor.ResourceManagement
       ResourceDatabase.LibraryRemoved += OnLibraryRemoved;
     }
 
-    private static void IgnoreWrapper(Action action)
+    private static void TryWrapper(Action action)
     {
       _ignore = true;
-      action.Invoke();
-      _ignore = false;
-    }
-
-    private static bool Try(Action action)
-    {
-      _ignore = true;
-      return Diagnostics.Try(action, e => new UnityErrorContext(e, stackTrace: new(true)), onFinally: () => _ignore = false);
+      try
+      {
+        action.Invoke();
+      }
+      catch(Exception e)
+      {
+        using(UnityDiagnostics.OptionsScope(UnityDiagnosticOptions.LogAndConsumeAll))
+        {
+          UnityDiagnostics.LogError(e);
+        }
+      }
+      finally
+      {
+        _ignore = false;
+      }
     }
 
     private static string[] GetFolders(Type type)
@@ -245,7 +252,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
       string path = $"{ResourceDatabase.AssetPath}/{type.Name}";
       if(!AssetDatabase.IsValidFolder(path))
       {
-        Try(() => AssetDatabase.CreateFolder(ResourceDatabase.AssetPath, type.Name));
+        TryWrapper(() => AssetDatabase.CreateFolder(ResourceDatabase.AssetPath, type.Name));
       }
     }
 
@@ -287,11 +294,9 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
     private static void DelayedAddCollection(ResourceLibrary library, string name)
     {
-      if(Try(() => library?.AddCollection(name)))
-      {
-        EditorUtility.SetDirty(ResourceDatabase.Instance);
-        AssetDatabase.SaveAssetIfDirty(ResourceDatabase.Instance);
-      }
+      library.AddCollection(name);
+      EditorUtility.SetDirty(ResourceDatabase.Instance);
+      AssetDatabase.SaveAssetIfDirty(ResourceDatabase.Instance);
     }
 
     private static void OnLibraryRemoved(ResourceLibrary library)

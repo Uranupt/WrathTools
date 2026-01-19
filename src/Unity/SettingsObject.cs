@@ -22,11 +22,10 @@ namespace WrathTools.Unity
         obj = GetSettings.Invoke(typeof(T)) as T;
         if(obj == null)
         {
-          DiagnosticContext error = new UnityErrorContext(
+          UnityDiagnostics.LogError(
             new Exception($"Setttings object of Type '{typeof(T).Name}' was not found."),
-            stackTrace : new(true)
+            stackTrace: new(true)
           );
-          Diagnostics.Log(error);
         }
       }
       return obj;

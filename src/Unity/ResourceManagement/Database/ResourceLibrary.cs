@@ -120,11 +120,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetCollection(name, out ResourceCollection resl))
       {
-        DiagnosticContext error = new UnityErrorContext(
-           new Exception($"No ResourceCollection with name '{name}' found in ResourceLibrary '{Name}'"),
-           stackTrace: new(true)
+        UnityDiagnostics.LogError(
+          new Exception($"No ResourceCollection with name '{name}' found in ResourceLibrary '{Name}'"),
+          stackTrace: new(true)
         );
-        Diagnostics.Log(error);
       }
       return resl;
     }
@@ -133,11 +132,10 @@ namespace WrathTools.Unity.ResourceManagement
     {
       if(!TryGetCollection(id, out ResourceCollection resl))
       {
-        DiagnosticContext error = new UnityErrorContext(
+        UnityDiagnostics.LogError(
           new Exception($"No ResourceCollection for ID '{id.ToIDString(true)}' found in ResourceLibrary '{Name}'"),
           stackTrace: new(true)
         );
-        Diagnostics.Log(error);
       }
       return resl;
     }
@@ -190,8 +188,7 @@ namespace WrathTools.Unity.ResourceManagement
       }
       else
       {
-        DiagnosticContext error = new UnityErrorContext(new InvalidOperationException(GetIndexOverflowMessage(name)), stackTrace: new(true));
-        Diagnostics.Log(error);
+        UnityDiagnostics.LogError(new InvalidOperationException(GetIndexOverflowMessage(name)), stackTrace: new(true));
       }
     }
 

@@ -61,13 +61,13 @@ namespace WrathTools.Unity.ResourceManagement
         {
           if(!ResourceID.TryGetResourcePath(id, out string path))
           {
-            Diagnostics.Log(new UnityErrorContext(new Exception($"Failed to find path for resource with ID: {id.ToIDString(true)}")));
+            UnityDiagnostics.LogError(new Exception($"Failed to find path for resource with ID: {id.ToIDString(true)}"));
             return;
           }
           value = Resources.Load<ResourceObject>(path);
           if(value == null)
           {
-            Diagnostics.Log(new UnityErrorContext(new Exception($"Resources.Load returned null at path: {path}")));
+            UnityDiagnostics.LogError(new Exception($"Resources.Load returned null at path: {path}"));
             return;
           }
           _cache[id] = value;

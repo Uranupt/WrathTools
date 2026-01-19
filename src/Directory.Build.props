@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <UnityVersionPath>C:\Program Files\Unity\Hub\Editor\6000.3.3f1</UnityVersionPath>
+    <UnityVersionPath>C:\Program Files\Unity\Hub\Editor\6000.1.6f1</UnityVersionPath>
     <UnityEditorPath>$(UnityVersionPath)\Editor\Data\Managed\UnityEngine</UnityEditorPath>
   </PropertyGroup>
 

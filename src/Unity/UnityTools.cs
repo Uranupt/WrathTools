@@ -111,11 +111,10 @@ namespace WrathTools.Unity
 			{
 				if(!obj.TryGetComponent(out field))
 				{
-					DiagnosticContext error = new UnityErrorContext(
+					UnityDiagnostics.LogError(
 						new Exception($"The provided GameObject was missing the expected Component of Type '{typeof(T).Name}'"),
 						stackTrace: new(true)
 					);
-					field = Diagnostics.ThrowOrDefault<T>(error);
 				}
 			}
 			return field;
@@ -129,11 +128,10 @@ namespace WrathTools.Unity
 				field = predicate != null ? objects.FirstOrDefault(predicate) : objects.FirstOrDefault();
 				if(field == null)
 				{
-					DiagnosticContext error = new UnityErrorContext(
+					UnityDiagnostics.LogError(
 						new Exception($"No Component of  Type '{typeof(T).Name}' matching the provdid predicate was found in the Scene"),
 						stackTrace: new(true)
 					);
-					Diagnostics.Log(error);
 				}
 			}
 			return field;
