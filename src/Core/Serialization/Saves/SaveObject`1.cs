@@ -1,19 +1,24 @@
-using System;
-using System.IO;
+﻿using System;
 using System.Threading.Tasks;
 
 
 namespace WrathTools
 {
-  public abstract class SaveObject<TSave, TProvider> : SaveObject
-    where TSave : SaveObject<TSave, TProvider>
-    where TProvider : class, ISaveProvider<TSave, TProvider>
-  {
+  public abstract class SaveObject<TProvider> : SaveObject
+  { 
 
-    public override Type Type => typeof(TProvider);
+    public sealed override Type LoadType => typeof(TProvider);
 
     public TProvider Load()
     {
+      if(!Valid)
+      {
+        Diagnostics.LogError(
+          new InvalidOperationException($"SaveObjects must be Valid to be used. Build State Flags: {State}"),
+          stackTrace: new(true)
+        );
+        return default;
+      }
       TProvider resl = LoadProtected();
       MarkConsumed();
       return resl;
@@ -21,6 +26,15 @@ namespace WrathTools
 
     public async Task<TProvider> LoadAsync(Action<TProvider> onDone = null)
     {
+      if(!Valid)
+      {
+        Diagnostics.LogError(
+          new InvalidOperationException($"SaveObjects must be Valid to be used. Build State Flags: {State}"),
+          stackTrace: new(true)
+        );
+        onDone?.Invoke(default);
+        return default;
+      }
       TProvider resl = await LoadAsyncProtected();
       MarkConsumed();
       onDone?.Invoke(resl);

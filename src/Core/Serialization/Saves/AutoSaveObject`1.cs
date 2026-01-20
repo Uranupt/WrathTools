@@ -8,8 +8,7 @@ using System.IO;
 
 namespace WrathTools
 {
-  public sealed class AutoSaveObject<TProvider> : SaveObject<AutoSaveObject<TProvider>, TProvider>
-    where TProvider : class, IAutoSaveProvider<TProvider>
+  public sealed class AutoSaveObject<TProvider> : SaveObject<TProvider> where TProvider : class, IAutoSaveProvider
   {
 
     private class FieldAndOrder
@@ -47,7 +46,17 @@ namespace WrathTools
         );
         return;
       }
-      _creator = (Activator.CreateInstance(typeof(TProvider)) as IAutoSaveProvider<TProvider>).GetCreator();
+      MethodInfo createInfo = typeof(TProvider).GetMethods(BindingFlags.Static)
+        .Where(m => m.Name == "Create" && m.ReturnType == typeof(TProvider) && m.GetParameters().Length == 0)
+        .FirstOrDefault();
+      if(createInfo == null)
+      {
+        Diagnostics.LogError(
+          new MissingMethodException($"The IAutoSaveProvider Type '{typeof(TProvider).Name}' is missing the required static Create method.")
+        );
+        return;
+      }
+      _creator = (Func<TProvider>)Delegate.CreateDelegate(typeof(TProvider), createInfo);
       _saveFields = new List<FieldAndOrder>(
         typeof(TProvider).GetFields()
         .Select(f => (field: f, attr: f.GetCustomAttribute<AutoSaveFieldAttribute>()))
@@ -59,7 +68,7 @@ namespace WrathTools
       for(int i = 0; i < _saveFields.Count; i++)
       {
         FieldAndOrder curr = _saveFields[i];
-        if(!curr.Field.FieldType.IsBinaryConvertible())
+        if(!curr.Field.FieldType.IsBinarySerializable())
         {
           Diagnostics.LogWarning($"A field is marked with the AutoSaveField Attribute but is not of a Binary Convertible Type." +
             $" \n Class: '{typeof(TProvider).Name}', Field: '{curr.Field.Name}', FieldType: '{curr.Field.FieldType.Name}'");

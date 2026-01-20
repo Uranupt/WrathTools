@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+
 
 namespace WrathTools
 {
@@ -15,6 +19,8 @@ namespace WrathTools
       public Action<BinaryWriter, object> Write;
 
     }
+
+    private static bool _initialized;
 
     private readonly static Dictionary<Type, ConvertibleInfo> _convertibles = new()
     {
@@ -48,79 +54,25 @@ namespace WrathTools
       [typeof(string)] = new ConvertibleInfo() { Read = r => r.ReadString(), Write = (w, v) => w.Write((string)v) }
     };
 
-
-    public static bool IsWritable(Type type)
+    private static Dictionary<Type, ConvertibleInfo> Convertibles
     {
-      if(_convertibles.TryGetValue(type, out ConvertibleInfo value))
+      get
       {
-        return value.Write != null;
+        Initialize();
+        return _convertibles;
       }
-      if(typeof(IBinaryWritable).IsAssignableFrom(type))
-      {
-        BuildInfo(type);
-        return true;
-      }
-      return false;
     }
 
-    public static bool IsWritable<T>() => IsWritable(typeof(T));
-    public static bool IsWritable(object obj) => IsWritable(obj.GetType());
-    public static bool IsBinaryWritable(this Type type) => IsWritable(type);
-    public static bool IsBinaryWritable(this object obj) => IsWritable(obj);
-
-    public static bool IsReadable(Type type)
-    {
-      if(_convertibles.TryGetValue(type, out ConvertibleInfo value))
-      {
-        return value.Read != null;
-      }
-      if(typeof(IBinaryReadable).IsAssignableFrom(type))
-      {
-        BuildInfo(type);
-        return true;
-      }
-      return false;
-    }
-
-    public static bool IsReadable<T>() => IsReadable(typeof(T));
-    public static bool IsReadable(object obj) => IsReadable(obj.GetType());
-    public static bool IsBinaryReadable(this Type type) => IsReadable(type);
-    public static bool IsBinaryReadable(this object obj) => IsReadable(obj);
-
-    public static bool IsConvertible(Type type)
-    {
-      if(_convertibles.TryGetValue(type, out ConvertibleInfo value))
-      {
-        return value.Read != null && value.Write != null;
-      }
-      if(typeof(IBinaryConvertible).IsAssignableFrom(type)
-        || (typeof(IBinaryReadable).IsAssignableFrom(type) && typeof(IBinaryWritable).IsAssignableFrom(type)))
-      {
-        BuildInfo(type);
-        return true;
-      }
-      return false;
-    }
-
-    public static bool IsConvertible<T>() => IsConvertible(typeof(T));
-    public static bool IsConvertible(object obj) => IsConvertible(obj.GetType());
-    public static bool IsBinaryConvertible(this Type type) => IsConvertible(type);
-    public static bool IsBinaryConvertible(this object obj) => IsConvertible(obj);
+    public static bool IsSerializable(Type type) => Convertibles.ContainsKey(type);
+    public static bool IsSerializable<T>() => IsSerializable(typeof(T));
+    public static bool IsSerializable(object obj) => IsSerializable(obj.GetType());
+    public static bool IsBinarySerializable(this Type type) => IsSerializable(type);
+    public static bool IsBinarySerializable(this object obj) => IsSerializable(obj);
 
     public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write)
     {
-      if(_convertibles.TryGetValue(type, out ConvertibleInfo value))
-      {
-        write = value.Write;
-        return write != null;
-      }
-      else if(typeof(IBinaryWritable).IsAssignableFrom(type))
-      {
-        write = BuildInfo(type).Write;
-        return true;
-      }
-      write = null;
-      return false;
+      write = Convertibles.TryGetValue(type, out ConvertibleInfo value) ? value.Write : null;
+      return write != null;
     }
 
     public static bool TryGetWrite<T>(out Action<BinaryWriter, object> write) => TryGetWrite(typeof(T), out write);
@@ -158,18 +110,8 @@ namespace WrathTools
 
     public static bool TryGetRead(Type type, out Func<BinaryReader, object> read)
     {
-      if(_convertibles.TryGetValue(type, out ConvertibleInfo info))
-      {
-        read = info.Read;
-        return read != null;
-      }
-      else if(typeof(IBinaryReadable).IsAssignableFrom(type))
-      {
-        read = BuildInfo(type).Read;
-        return true;
-      }
-      read = null;
-      return false;
+      read = Convertibles.TryGetValue(type, out ConvertibleInfo info) ? info.Read : null;
+      return read != null;
     }
 
     public static bool TryGetRead<T>(out Func<BinaryReader, object> read) => TryGetRead(typeof(T), out read);
@@ -301,19 +243,55 @@ namespace WrathTools
       return value;
     }
 
-    private static ConvertibleInfo BuildInfo(Type type)
+    private static void Initialize()
     {
-      ConvertibleInfo info = new();
-      if(typeof(IBinaryWritable).IsAssignableFrom(type))
+      if(_initialized) { return; }
+      _initialized = true;
+      Type[] types = AppDomain.CurrentDomain.GetAssemblies()
+        .SelectMany(a => a.GetTypes())
+        .Where(t => t.IsSealed && t.GetCustomAttributes(typeof(BinarySerializableAttribute), false).Length > 0)
+        .ToArray();
+
+      static bool ParamCheck(ParameterInfo[] parameters, params Type[] paramTypes)
       {
-        info.Write = (w, v) => (v as IBinaryWritable).Write(w);
+        if(parameters.Length != paramTypes.Length) { return false; }
+        for(int i = 0; i < parameters.Length; i++)
+        {
+          if(parameters[i].ParameterType !=  paramTypes[i]) { return false; }
+        }
+        return true;
       }
-      if(typeof(IBinaryReadable).IsAssignableFrom(type))
+
+      foreach(Type type in types)
       {
-        info.Read = (Activator.CreateInstance(type) as IBinaryReadable).GetReader();
+        MethodInfo readInfo = null;
+        MethodInfo writeInfo = null;
+        foreach(MethodInfo method in type.GetMethods(BindingFlags.Static | BindingFlags.Public))
+        {
+          if(method.Name == "Read" && (method.ReturnType == type || method.ReturnType == typeof(object))
+            && ParamCheck(method.GetParameters(), typeof(BinaryReader)))
+          {
+            readInfo = method;
+          }
+          if(method.Name == "Write" && ParamCheck(method.GetParameters(), typeof(BinaryWriter), type))
+          {
+            writeInfo = method;
+          }
+        }
+        if(readInfo == null || writeInfo == null)
+        {
+          Diagnostics.LogWarning($"The Type '{type.Name}' marked with the BinarySerializable Attribute is missing one or both of the required Read and Write methods." +
+            $" \n Read Missing: {readInfo == null}, Write Missing: {writeInfo == null} ");
+          continue;
+        }
+        Func<BinaryReader, object> read = (Func<BinaryReader, object>)Delegate.CreateDelegate(typeof(Func<BinaryReader, object>), readInfo);
+        ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
+        ParameterExpression writerParam = Expression.Parameter(typeof(object), "writer");
+        UnaryExpression castValue = Expression.Convert(valueParam, type);
+        MethodCallExpression call = Expression.Call(null, writeInfo, writerParam, castValue);
+        Action<BinaryWriter, object> write = Expression.Lambda<Action<BinaryWriter, object>>(call, writerParam, valueParam).Compile();
+        _convertibles[type] = new ConvertibleInfo() { Read = read, Write = write };
       }
-      _convertibles[type] = info;
-      return info;
     }
 
     private static string FailedGetWriteMessage(string typeName) => $"Failed to find the Binary Write method for the Type '{typeName}'";

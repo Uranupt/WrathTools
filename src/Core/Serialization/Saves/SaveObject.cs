@@ -19,7 +19,7 @@ namespace WrathTools
     public bool Sealed => State.Has(BuildState.Validated);
     public bool Consumed => State.Has(BuildState.Consumed);
     public bool Valid => State == BuildState.Validated;
-    public abstract Type Type { get; }
+    public abstract Type LoadType { get; }
 
     private static bool IsDefault(Type type, object obj)
     {
@@ -113,10 +113,10 @@ namespace WrathTools
         );
         return null;
       }
-      if(typeof(T).IsAssignableFrom(this.Type))
+      if(typeof(T).IsAssignableFrom(this.LoadType))
       {
         Diagnostics.LogError(
-          new InvalidOperationException($"The Type '{this.Type.Name}' cannot be assigned to a field of Type '{typeof(T).Name}'"),
+          new InvalidOperationException($"The Type '{this.LoadType.Name}' cannot be assigned to a field of Type '{typeof(T).Name}'"),
           stackTrace: new(true)
         );
         return null;
@@ -137,10 +137,10 @@ namespace WrathTools
         onDone?.Invoke(null);
         return null;
       }
-      if(typeof(T).IsAssignableFrom(this.Type))
+      if(typeof(T).IsAssignableFrom(this.LoadType))
       {
         Diagnostics.LogError(
-          new InvalidOperationException($"The Type '{this.Type.Name}' cannot be assigned to a field of Type '{typeof(T).Name}'"),
+          new InvalidOperationException($"The Type '{this.LoadType.Name}' cannot be assigned to a field of Type '{typeof(T).Name}'"),
           stackTrace: new(true)
         );
         onDone?.Invoke(null);
