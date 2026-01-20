@@ -71,6 +71,7 @@ namespace WrathTools
 
     public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write)
     {
+      if(type.IsGenericType )
       write = Convertibles.TryGetValue(type, out ConvertibleInfo value) ? value.Write : null;
       return write != null;
     }
