@@ -4,13 +4,18 @@ using System.IO;
 
 namespace WrathTools
 {
-  internal class BinaryConverter<T> : BinaryConverter
+  public class BinaryConverter<T> : BinaryConverter
   {
 
-    public override Func<BinaryReader, object> Read => r => ReadExact.Invoke(r); 
-    public Func<BinaryReader, T> ReadExact { get; private set; }
+    public new readonly Func<BinaryReader, T> Read;
+    public new readonly Action<BinaryWriter, T> Write;
 
-    public
+    internal BinaryConverter(Func<BinaryReader, T> read, Action<BinaryWriter, T> write)
+      : base(r => read.Invoke(r), (w, v) => write.Invoke(w, (T)v))
+    {
+      Read = read;
+      Write = write;
+    }
 
   }
 }

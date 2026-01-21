@@ -84,6 +84,12 @@ namespace WrathTools
       return false;
     }
 
+    private static BinaryEnumerableSerializer BuildGeneric<T>(Func<object, int> getCount,
+      Func<BinaryReader, object> innerRead, Action<BinaryWriter, object> innerWrite)
+    {
+
+    }
+
     private static bool TryGetMethods(Type type, out Func<BinaryReader, object> read, out Action<BinaryWriter, object> write)
     {
       read = null;

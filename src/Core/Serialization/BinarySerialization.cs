@@ -12,56 +12,25 @@ namespace WrathTools
   public static class BinarySerialization
   {
 
-    private class ConvertibleInfo
-    {
-
-      public Func<BinaryReader, object> Read;
-      public Action<BinaryWriter, object> Write;
-
-    }
-
     private static bool _initialized;
 
-    private readonly static Dictionary<Type, ConvertibleInfo> _convertibles = new()
+    private static Dictionary<Type, BinaryConverter> _converters = new()
     {
-      //bool
-      [typeof(bool)] = new ConvertibleInfo() { Read = r => r.ReadBoolean(), Write = (w, v) => w.Write((bool)v) },
-      //byte
-      [typeof(byte)] = new ConvertibleInfo() { Read = r => r.ReadByte(), Write = (w, v) => w.Write((byte)v) },
-      //sbyte
-      [typeof(sbyte)] = new ConvertibleInfo() { Read = r => r.ReadSByte(), Write = (w, v) => w.Write((sbyte)v) },
-      //short
-      [typeof(short)] = new ConvertibleInfo() { Read = r => r.ReadInt16(), Write = (w, v) => w.Write((short)v) },
-      //ushort
-      [typeof(ushort)] = new ConvertibleInfo() { Read = r => r.ReadUInt16(), Write = (w, v) => w.Write((ushort)v) },
-      //int
-      [typeof(int)] = new ConvertibleInfo() { Read = r => r.ReadInt32(), Write = (w, v) => w.Write((int)v) },
-      //uint
-      [typeof(uint)] = new ConvertibleInfo() { Read = r => r.ReadUInt32(), Write = (w, v) => w.Write((uint)v) },
-      //long
-      [typeof(long)] = new ConvertibleInfo() { Read = r => r.ReadInt64(), Write = (w, v) => w.Write((long)v) },
-      //ulong
-      [typeof(ulong)] = new ConvertibleInfo() { Read = r => r.ReadUInt64(), Write = (w, v) => w.Write((ulong)v) },
-      //float
-      [typeof(float)] = new ConvertibleInfo() { Read = r => r.ReadSingle(), Write = (w, v) => w.Write((float)v) },
-      //double
-      [typeof(double)] = new ConvertibleInfo() { Read = r => r.ReadDouble(), Write = (w, v) => w.Write((double)v) },
-      //decimal
-      [typeof(decimal)] = new ConvertibleInfo() { Read = r => r.ReadDecimal(), Write = (w, v) => w.Write((decimal)v) },
-      //char
-      [typeof(char)] = new ConvertibleInfo() { Read = r => r.ReadChar(), Write = (w, v) => w.Write((char)v) },
-      //string
-      [typeof(string)] = new ConvertibleInfo() { Read = r => r.ReadString(), Write = (w, v) => w.Write((string)v) }
+      [typeof(bool)] = new BinaryConverter<bool>(r => r.ReadBoolean(), (w, v) => w.Write(v)),
+      [typeof(byte)] = new BinaryConverter<byte>(r => r.ReadByte(), (w, v) => w.Write(v)),
+      [typeof(sbyte)] = new BinaryConverter<sbyte>(r => r.ReadSByte(), (w, v) => w.Write(v)),
+      [typeof(short)] = new BinaryConverter<short>(r => r.ReadInt16(), (w, v) => w.Write(v)),
+      [typeof(ushort)] = new BinaryConverter<ushort>(r => r.ReadUInt16(), (w, v) => w.Write(v)),
+      [typeof(int)] = new BinaryConverter<int>(r => r.ReadInt32(), (w, v) => w.Write(v)),
+      [typeof(uint)] = new BinaryConverter<uint>(r => r.ReadUInt32(), (w, v) => w.Write(v)),
+      [typeof(long)] = new BinaryConverter<long>(r => r.ReadInt64(), (w, v) => w.Write(v)),
+      [typeof(ulong)] = new BinaryConverter<ulong>(r => r.ReadUInt64(), (w, v) => w.Write(v)),
+      [typeof(float)] = new BinaryConverter<float>(r => r.ReadSingle(), (w, v) => w.Write(v)),
+      [typeof(double)] = new BinaryConverter<double>(r => r.ReadDouble(), (w, v) => w.Write(v)),
+      [typeof(decimal)] = new BinaryConverter<decimal>(r => r.ReadDecimal(), (w, v) => w.Write(v)),
+      [typeof(char)] = new BinaryConverter<char>(r => r.ReadChar(), (w, v) => w.Write(v)),
+      [typeof(string)] = new BinaryConverter<string>(r => r.ReadString(), (w, v) => w.Write(v))
     };
-
-    private static Dictionary<Type, ConvertibleInfo> Convertibles
-    {
-      get
-      {
-        Initialize();
-        return _convertibles;
-      }
-    }
 
     internal readonly static HashSet<Type> SystemSerialzableTypes = new()
     {
@@ -80,6 +49,15 @@ namespace WrathTools
       typeof(char),
       typeof(string)
     };
+
+    internal static Dictionary<Type, BinaryConverter> Converters
+    {
+      get
+      {
+        Initialize();
+        return _converters;
+      }
+    }
 
     public static bool IsSerializable(Type type) => Convertibles.ContainsKey(type);
     public static bool IsSerializable<T>() => IsSerializable(typeof(T));
@@ -317,13 +295,15 @@ namespace WrathTools
         return true;
       }
 
+      MethodInfo buildConverter = typeof(BinaryConverter).GetMethod("BuildGeneric", BindingFlags.Static);
+
       foreach(Type type in manualTypes)
       {
         MethodInfo readInfo = null;
         MethodInfo writeInfo = null;
         foreach(MethodInfo method in type.GetMethods(BindingFlags.Static | BindingFlags.Public))
         {
-          if(method.Name == "Read" && (method.ReturnType == type || method.ReturnType == typeof(object))
+          if(method.Name == "Read" && method.ReturnType == type
             && ParamCheck(method.GetParameters(), typeof(BinaryReader)))
           {
             readInfo = method;
@@ -340,13 +320,13 @@ namespace WrathTools
           allTypes.Remove(type);
           continue;
         }
-        Func<BinaryReader, object> read = (Func<BinaryReader, object>)Delegate.CreateDelegate(typeof(Func<BinaryReader, object>), readInfo);
-        ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
-        ParameterExpression writerParam = Expression.Parameter(typeof(object), "writer");
-        UnaryExpression castValue = Expression.Convert(valueParam, type);
-        MethodCallExpression call = Expression.Call(null, writeInfo, writerParam, castValue);
-        Action<BinaryWriter, object> write = Expression.Lambda<Action<BinaryWriter, object>>(call, writerParam, valueParam).Compile();
-        _convertibles[type] = new ConvertibleInfo() { Read = read, Write = write };
+        //Func<BinaryReader, object> read = (Func<BinaryReader, object>)Delegate.CreateDelegate(typeof(Func<BinaryReader, object>), readInfo);
+        //ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
+        //ParameterExpression writerParam = Expression.Parameter(typeof(object), "writer");
+        //UnaryExpression castValue = Expression.Convert(valueParam, type);
+        //MethodCallExpression call = Expression.Call(null, writeInfo, writerParam, castValue);
+        //Action<BinaryWriter, object> write = Expression.Lambda<Action<BinaryWriter, object>>(call, writerParam, valueParam).Compile();
+        _converters[type] = buildConverter.MakeGenericMethod(type).Invoke(null, new object[] { readInfo, writeInfo }) as BinaryConverter;
       }
 
       foreach((Type type, bool incPublic, bool canNew) in autoTypes)
