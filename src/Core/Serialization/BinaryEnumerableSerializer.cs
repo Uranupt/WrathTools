@@ -9,16 +9,35 @@ using System.Collections;
 
 namespace WrathTools
 {
-  internal class BinaryEnumerableSerializer
+  internal abstract class BinaryEnumerableSerializer
   {
 
     private readonly static Func<Type, bool> _enumerablePredicate = i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>);
 
     private readonly static Dictionary<Type, BinaryEnumerableSerializer> _serializers = new();
 
-    private readonly Func<object, int> _getCount;
-    private readonly Func<BinaryReader, object> _innerRead;
-    private readonly Action<BinaryWriter, object> _innerWrite;
+    protected readonly Func<object, int> _getCount;
+    protected readonly Func<BinaryReader, object> _innerRead;
+    protected readonly Action<BinaryWriter, object> _innerWrite;
+
+    public static bool IsBaseTypeSerializable(Type type, IEnumerable<Type> serializableTypes)
+    {
+      Type innerType;
+      if(type.IsArray)
+      {
+        innerType = type.GetElementType();
+      }
+      else
+      {
+        Type iEnum = type.GetInterfaces().FirstOrDefault(_enumerablePredicate);
+        if(iEnum == null)
+        {
+          return BinarySerialization.SystemSerialzableTypes.Contains(type) || serializableTypes.Contains(type);
+        }
+        innerType = iEnum.GenericTypeArguments[0];
+      }
+      return IsBaseTypeSerializable(innerType, serializableTypes);
+    }
 
     public static bool TryGet(Type type, out BinaryEnumerableSerializer serializer)
     {
@@ -41,6 +60,28 @@ namespace WrathTools
 
         return TryBuildEnumerable(type, iEnum, iColl, out serializer);
       }
+    }
+
+    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write)
+    {
+      if(TryGet(type, out BinaryEnumerableSerializer serializer))
+      {
+        write = serializer.Write;
+        return true;
+      }
+      write = null;
+      return false;
+    }
+
+    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read)
+    {
+      if(TryGet(type, out BinaryEnumerableSerializer serializer))
+      {
+        read = serializer.Read;
+        return true;
+      }
+      read = null;
+      return false;
     }
 
     private static bool TryGetMethods(Type type, out Func<BinaryReader, object> read, out Action<BinaryWriter, object> write)
@@ -118,7 +159,7 @@ namespace WrathTools
       _innerWrite = innerWrite;
     }
 
-    public object Read(BinaryReader reader)
+    public abstract object Read(BinaryReader reader)
     {
       int count = reader.ReadInt32();
       object[] arr = new object[count];

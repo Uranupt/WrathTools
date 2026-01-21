@@ -63,16 +63,42 @@ namespace WrathTools
       }
     }
 
+    internal readonly static HashSet<Type> SystemSerialzableTypes = new()
+    {
+      typeof(bool),
+      typeof(byte),
+      typeof(sbyte),
+      typeof(short),
+      typeof(ushort),
+      typeof(int),
+      typeof(uint),
+      typeof(long),
+      typeof(ulong),
+      typeof(float),
+      typeof(double),
+      typeof(decimal),
+      typeof(char),
+      typeof(string)
+    };
+
     public static bool IsSerializable(Type type) => Convertibles.ContainsKey(type);
     public static bool IsSerializable<T>() => IsSerializable(typeof(T));
     public static bool IsSerializable(object obj) => IsSerializable(obj.GetType());
     public static bool IsBinarySerializable(this Type type) => IsSerializable(type);
     public static bool IsBinarySerializable(this object obj) => IsSerializable(obj);
 
-    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write)
+    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write, bool allowEnumerable = false)
     {
-      if(type.IsGenericType )
-      write = Convertibles.TryGetValue(type, out ConvertibleInfo value) ? value.Write : null;
+      if(Convertibles.TryGetValue(type, out ConvertibleInfo value))
+      {
+        write = value.Write;
+        return true;
+      }
+      if(allowEnumerable)
+      {
+        return BinaryEnumerableSerializer.TryGetWrite(type, out write);
+      }
+      write = null;
       return write != null;
     }
 
@@ -109,10 +135,19 @@ namespace WrathTools
       return false;
     }
 
-    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read)
+    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read, bool allowEnumerable = false)
     {
-      read = Convertibles.TryGetValue(type, out ConvertibleInfo info) ? info.Read : null;
-      return read != null;
+      if(Convertibles.TryGetValue(type, out ConvertibleInfo info))
+      {
+        read = info.Read;
+        return true;
+      }
+      if(allowEnumerable)
+      {
+        return BinaryEnumerableSerializer.TryGetRead(type, out read);
+      }
+      read = null;
+      return false;
     }
 
     public static bool TryGetRead<T>(out Func<BinaryReader, object> read) => TryGetRead(typeof(T), out read);
@@ -248,10 +283,29 @@ namespace WrathTools
     {
       if(_initialized) { return; }
       _initialized = true;
-      Type[] types = AppDomain.CurrentDomain.GetAssemblies()
+      IEnumerable<(Type, BinarySerializableAttribute)> types = AppDomain.CurrentDomain.GetAssemblies()
         .SelectMany(a => a.GetTypes())
-        .Where(t => t.IsSealed && t.GetCustomAttributes(typeof(BinarySerializableAttribute), false).Length > 0)
-        .ToArray();
+        .Select(t => (type: t, attr: (BinarySerializableAttribute)t.GetCustomAttributes(typeof(BinarySerializableAttribute)).FirstOrDefault()))
+        .Where(p => p.type != null && p.type.IsSealed && p.attr != null);
+      HashSet<Type> allTypes = new();
+      List<Type> manualTypes = new();
+      List<(Type, bool, bool)> autoTypes = new();
+      foreach((Type type, BinarySerializableAttribute attr) in types)
+      {
+        if(attr.Manual)
+        {
+          manualTypes.Add(type);
+        }
+        else if(type.HasCreator() || type.GetConstructor(Type.EmptyTypes) != null)
+        {
+          autoTypes.Add((type, attr.SerializePublic, type.GetConstructor(Type.EmptyTypes) != null));
+        }
+        else
+        {
+          continue;
+        }
+        allTypes.Add(type);
+      }
 
       static bool ParamCheck(ParameterInfo[] parameters, params Type[] paramTypes)
       {
@@ -263,7 +317,7 @@ namespace WrathTools
         return true;
       }
 
-      foreach(Type type in types)
+      foreach(Type type in manualTypes)
       {
         MethodInfo readInfo = null;
         MethodInfo writeInfo = null;
@@ -283,6 +337,7 @@ namespace WrathTools
         {
           Diagnostics.LogWarning($"The Type '{type.Name}' marked with the BinarySerializable Attribute is missing one or both of the required Read and Write methods." +
             $" \n Read Missing: {readInfo == null}, Write Missing: {writeInfo == null} ");
+          allTypes.Remove(type);
           continue;
         }
         Func<BinaryReader, object> read = (Func<BinaryReader, object>)Delegate.CreateDelegate(typeof(Func<BinaryReader, object>), readInfo);
@@ -292,6 +347,12 @@ namespace WrathTools
         MethodCallExpression call = Expression.Call(null, writeInfo, writerParam, castValue);
         Action<BinaryWriter, object> write = Expression.Lambda<Action<BinaryWriter, object>>(call, writerParam, valueParam).Compile();
         _convertibles[type] = new ConvertibleInfo() { Read = read, Write = write };
+      }
+
+      foreach((Type type, bool incPublic, bool canNew) in autoTypes)
+      {
+        BinarySerializationSchema schema = new(type, incPublic, canNew, allTypes);
+        _convertibles[type] = new ConvertibleInfo() { Read = schema.Read, Write = schema.Write };
       }
     }
 
