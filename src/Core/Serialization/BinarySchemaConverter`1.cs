@@ -1,51 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Linq;
+using System.Data;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 
 
 namespace WrathTools
-{
-  internal class BinarySerializationSchema
+{ 
+  internal class BinarySchemaConverter<T> : BinaryConverter<T>
   {
 
-    private readonly Type _type;
-    private readonly Func<object> _new;
     private readonly Dictionary<string, FieldInfo> _fields = new();
+    private readonly ICreator<T> _create;
 
-    public BinarySerializationSchema(Type type, bool incPublic, bool canNew, HashSet<Type> allowedTypes)
+    internal BinarySchemaConverter(bool incPublic, HashSet<Type> allowedTypes)
     {
-      _type = type;
-      //TODO: New vs Create
-      HashSet<FieldInfo> autoFields = new(type.GetFields(BindingFlags.Instance)
+      _create = Creators.GetCreator<T>();
+      HashSet<FieldInfo> autoFields = new(this.Type.GetFields(BindingFlags.Instance)
         .Where(f => f.GetCustomAttribute<SerializeBinaryAttribute>() != null));
       if(incPublic)
       {
-        autoFields.UnionWith(type.GetFields(BindingFlags.Instance | BindingFlags.Public));
+        autoFields.UnionWith(this.Type.GetFields(BindingFlags.Instance | BindingFlags.Public));
       }
       foreach(FieldInfo field in autoFields)
       {
         if(!BinaryEnumerableSerializer.IsBaseTypeSerializable(field.FieldType, allowedTypes)) { continue; }
         _fields[field.Name] = field;
       }
+      SetMethods(ReadLoop, WriteLoop);
     }
 
-    public void Write(BinaryWriter writer, object instance)
+    private void WriteLoop(BinaryWriter writer, T instance)
     {
       writer.Write(_fields.Count);
       foreach(FieldInfo field in _fields.Values)
       {
         writer.Write(field.Name);
-        writer.WriteAs(field.FieldType, field.GetValue(instance), true);
+        writer.WriteAs(field.FieldType, field.GetValue(instance));
       }
     }
 
-    public object Read(BinaryReader reader)
+    private T ReadLoop(BinaryReader reader)
     {
-      object instance = _type.Create();
+      T instance = _create.Create();
       int count = reader.ReadInt32();
-      for(int i = 0; i  < count; i++)
+      for(int i = 0; i < count; i++)
       {
         if(_fields.TryGetValue(reader.ReadString(), out FieldInfo info))
         {

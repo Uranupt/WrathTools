@@ -13,8 +13,9 @@ namespace WrathTools
   {
 
     private static bool _initialized;
+    private static MethodInfo _enumerableBuilder = typeof(BinarySerialization).GetMethod("BuildEnumerableConverter", BindingFlags.Static);
 
-    private static Dictionary<Type, BinaryConverter> _converters = new()
+    private static readonly Dictionary<Type, BinaryConverter> _converters = new()
     {
       [typeof(bool)] = new BinaryConverter<bool>(r => r.ReadBoolean(), (w, v) => w.Write(v)),
       [typeof(byte)] = new BinaryConverter<byte>(r => r.ReadByte(), (w, v) => w.Write(v)),
@@ -59,32 +60,64 @@ namespace WrathTools
       }
     }
 
-    public static bool IsSerializable(Type type) => Convertibles.ContainsKey(type);
-    public static bool IsSerializable<T>() => IsSerializable(typeof(T));
-    public static bool IsSerializable(object obj) => IsSerializable(obj.GetType());
-    public static bool IsBinarySerializable(this Type type) => IsSerializable(type);
-    public static bool IsBinarySerializable(this object obj) => IsSerializable(obj);
+    public static bool IsSerializable(Type type, bool includeEnumerable = false) => TryGetConverter(type, out _, includeEnumerable);
+    public static bool IsSerializable<T>(bool includeEnumerable = false) => IsSerializable(typeof(T), includeEnumerable);
+    public static bool IsSerializable(object obj, bool includeEnumerable = false) => IsSerializable(obj.GetType(), includeEnumerable);
+    public static bool IsBinarySerializable(this Type type, bool includeEnumerable = false) => IsSerializable(type, includeEnumerable);
+    public static bool IsBinarySerializable(this object obj, bool includeEnumerable = false) => IsSerializable(obj, includeEnumerable);
 
-    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write, bool allowEnumerable = false)
+
+    public static bool TryGetConverter(this Type type, out BinaryConverter converter, bool includeEnumerable)
     {
-      if(Convertibles.TryGetValue(type, out ConvertibleInfo value))
+      if(!Converters.TryGetValue(type, out converter))
       {
-        write = value.Write;
-        return true;
+        if(includeEnumerable)
+        {
+          TryBuildEnumerableConverter(type, out converter);
+        }
       }
-      if(allowEnumerable)
-      {
-        return BinaryEnumerableSerializer.TryGetWrite(type, out write);
-      }
-      write = null;
+      return converter != null;
+    }
+
+    public static bool TryGetConverter<T>(out BinaryConverter<T> converter, bool includeEnumerable = false)
+    {
+      converter = TryGetConverter(typeof(T), out BinaryConverter cvrt, includeEnumerable)
+        ? (BinaryConverter<T>)cvrt : null;
+      return converter != null;
+    }
+
+    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write, bool includeEnumerable = false)
+    {
+      write = TryGetConverter(type, out BinaryConverter converter, includeEnumerable)
+        ? converter.Write : null;
       return write != null;
     }
 
-    public static bool TryGetWrite<T>(out Action<BinaryWriter, object> write) => TryGetWrite(typeof(T), out write);
-
-    public static bool TryWriteAs<T>(this BinaryWriter writer, T value)
+    public static bool TryGetWrite<T>(out Action<BinaryWriter, T> write, bool includeEnumerable = false)
     {
-      if(TryGetWrite(typeof(T), out Action<BinaryWriter, object> write))
+      write = TryGetConverter(out BinaryConverter<T> converter, includeEnumerable)
+        ? converter.Write : null;
+      return write != null;
+    }
+
+    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read, bool includeEnumerable = false)
+    {
+      read = TryGetConverter(type, out BinaryConverter converter, includeEnumerable)
+        ? converter.Read : null;
+      return read != null;
+    }
+
+    public static bool TryGetRead<T>(out Func<BinaryReader, T> read, bool includeEnumerable = false)
+    {
+      read = TryGetConverter(out BinaryConverter<T> converter, includeEnumerable)
+        ? converter.Read : null;
+      return read != null;
+    }
+
+    public static bool TryWriteAs(this BinaryWriter writer, Type type, object value, bool runtimeCheck, bool includeEnumerable = false)
+    {
+      if(runtimeCheck && value.GetType() != type) { return false; }
+      if(TryGetWrite(type, out Action<BinaryWriter, object> write, includeEnumerable))
       {
         write?.Invoke(writer, value);
         return true;
@@ -92,9 +125,9 @@ namespace WrathTools
       return false;
     }
 
-    public static bool TryWriteAsRuntime(this BinaryWriter writer, object value)
+    public static bool TryWriteAs<T>(this BinaryWriter writer, T value, bool includeEnumerable = false)
     {
-      if(TryGetWrite(value.GetType(), out Action<BinaryWriter, object> write))
+      if(TryGetWrite(out Action<BinaryWriter, T> write, includeEnumerable))
       {
         write?.Invoke(writer, value);
         return true;
@@ -102,37 +135,12 @@ namespace WrathTools
       return false;
     }
 
-    public static bool TryWriteAs(this BinaryWriter writer, Type type, object value)
-    {
-      if(value.GetType() != type) { return false; }
-      if(TryGetWrite(type, out Action<BinaryWriter, object> write))
-      {
-        write?.Invoke(writer, value);
-        return true;
-      }
-      return false;
-    }
+    public static bool TryWriteAsRuntime(this BinaryWriter writer, object value, bool includeEnumerable = false)
+      => TryWriteAs(writer, value.GetType(), false, includeEnumerable);
 
-    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read, bool allowEnumerable = false)
+    public static bool TryReadAs(this BinaryReader reader, Type type, out object value, bool includeEnumerable = false)
     {
-      if(Convertibles.TryGetValue(type, out ConvertibleInfo info))
-      {
-        read = info.Read;
-        return true;
-      }
-      if(allowEnumerable)
-      {
-        return BinaryEnumerableSerializer.TryGetRead(type, out read);
-      }
-      read = null;
-      return false;
-    }
-
-    public static bool TryGetRead<T>(out Func<BinaryReader, object> read) => TryGetRead(typeof(T), out read);
-
-    public static bool TryReadAs(this BinaryReader reader, Type type, out object value)
-    {
-      if(TryGetRead(type, out Func<BinaryReader, object> read))
+      if(TryGetRead(type, out Func<BinaryReader, object> read, includeEnumerable))
       {
         value = read?.Invoke(reader);
         return true;
@@ -141,121 +149,44 @@ namespace WrathTools
       return false;
     }
 
-    public static bool TryReadAs<T>(this BinaryReader reader, out T value)
+    public static bool TryReadAs<T>(this BinaryReader reader, out T value, bool includeEnumerable = false)
     {
-      if(TryGetRead(typeof(T), out Func<BinaryReader, object> read))
+      if(TryGetRead(out Func<BinaryReader, T> read, includeEnumerable))
       {
-        value = (T)read.Invoke(reader);
+        value = read.Invoke(reader);
         return true;
       }
       value = default;
       return false;
     }
 
-    public static Action<BinaryWriter, object> GetWrite(Type type)
+    public static BinaryConverter GetConverter(Type type)
     {
-      if(!TryGetWrite(type, out Action<BinaryWriter, object> write))
+      if(!TryGetConverter(type, out BinaryConverter converter, true))
       {
         Diagnostics.LogError(
-          new Exception(FailedGetWriteMessage(type.Name)),
+          new Exception($"Failed to find a BinaryConverter for the Type '{type.Name}'"),
           stackTrace: new(true)
         );
       }
-      return write;
+      return converter;
     }
 
-    public static Action<BinaryWriter, object> GetWrite<T>()
-    {
-      if(!TryGetWrite<T>(out Action<BinaryWriter, object> write))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedGetWriteMessage(typeof(T).Name)),
-          stackTrace: new(true)
-        );
-      }
-      return write;
-    }
+    public static BinaryConverter<T> GetConverter<T>() => (BinaryConverter<T>)GetConverter(typeof(T));
+    public static BinaryConverter GetBinaryConverter(this Type type) => GetConverter(type);
 
-    public static void WriteAs(this BinaryWriter writer, Type type, object value)
-    {
-      if(!writer.TryWriteAs(type, value))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedWriteMessage(type.Name)),
-          stackTrace: new(true)
-        );
-      }
-    }
+    public static Action<BinaryWriter, object> GetWrite(Type type) => GetConverter(type).Write;
+    public static Action<BinaryWriter, T> GetWrite<T>() => GetConverter<T>().Write;
 
-    public static void WriteAs<T>(this BinaryWriter writer, T value)
-    {
-      if(!writer.TryWriteAs(value))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedWriteMessage(typeof(T).Name)),
-          stackTrace: new(true)
-        );
-      }
-    }
+    public static void WriteAs(this BinaryWriter writer, Type type, object value) => GetWrite(type).Invoke(writer, value);
+    public static void WriteAs<T>(this BinaryWriter writer, T value) => GetWrite<T>().Invoke(writer, value);
+    public static void WriteAsRuntime(this BinaryWriter writer, object value) => WriteAs(writer, value.GetType(), value);
 
-    public static void WriteAsRuntime(this BinaryWriter writer, object value)
-    {
-      if(!writer.TryWriteAsRuntime(value))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedWriteMessage(value.GetType().Name)),
-          stackTrace: new(true)
-        );
-      }
-    }
+    public static Func<BinaryReader, object> GetRead(Type type) => GetConverter(type).Read;
+    public static Func<BinaryReader, T> GetRead<T>() => GetConverter<T>().Read;
 
-    public static Func<BinaryReader, object> GetRead(Type type)
-    {
-      if(!TryGetRead(type, out Func<BinaryReader, object> read))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedGetReadMessage(type.Name)),
-          stackTrace: new(true)
-        );
-      }
-      return read;
-    }
-
-    public static Func<BinaryReader, object> GetRead<T>()
-    {
-      if(!TryGetRead<T>(out Func<BinaryReader, object> read))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedGetReadMessage(typeof(T).Name)),
-          stackTrace: new(true)
-        );
-      }
-      return read;
-    }
-
-    public static object ReadAs(this BinaryReader reader, Type type)
-    {
-      if(!reader.TryReadAs(type, out object value))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedReadMessage(type.Name)),
-          stackTrace: new(true)
-        );
-      }
-      return value;
-    }
-
-    public static T ReadAs<T>(this BinaryReader reader)
-    {
-      if(!reader.TryReadAs(out T value))
-      {
-        Diagnostics.LogError(
-          new Exception(FailedReadMessage(typeof(T).Name)),
-          stackTrace: new(true)
-        );
-      }
-      return value;
-    }
+    public static object ReadAs(this BinaryReader reader, Type type) => GetRead(type).Invoke(reader);
+    public static T ReadAs<T>(this BinaryReader reader) => GetRead<T>().Invoke(reader);
 
     private static void Initialize()
     {
@@ -267,16 +198,16 @@ namespace WrathTools
         .Where(p => p.type != null && p.type.IsSealed && p.attr != null);
       HashSet<Type> allTypes = new();
       List<Type> manualTypes = new();
-      List<(Type, bool, bool)> autoTypes = new();
+      List<(Type, bool)> autoTypes = new();
       foreach((Type type, BinarySerializableAttribute attr) in types)
       {
         if(attr.Manual)
         {
           manualTypes.Add(type);
         }
-        else if(type.HasCreator() || type.GetConstructor(Type.EmptyTypes) != null)
+        else if(type.HasCreator(true))
         {
-          autoTypes.Add((type, attr.SerializePublic, type.GetConstructor(Type.EmptyTypes) != null));
+          autoTypes.Add((type, attr.SerializePublic));
         }
         else
         {
@@ -295,7 +226,7 @@ namespace WrathTools
         return true;
       }
 
-      MethodInfo buildConverter = typeof(BinaryConverter).GetMethod("BuildGeneric", BindingFlags.Static);
+      MethodInfo buildConverter = typeof(BinarySerialization).GetMethod("BuildManualConverter", BindingFlags.Static);
 
       foreach(Type type in manualTypes)
       {
@@ -320,26 +251,58 @@ namespace WrathTools
           allTypes.Remove(type);
           continue;
         }
-        //Func<BinaryReader, object> read = (Func<BinaryReader, object>)Delegate.CreateDelegate(typeof(Func<BinaryReader, object>), readInfo);
-        //ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
-        //ParameterExpression writerParam = Expression.Parameter(typeof(object), "writer");
-        //UnaryExpression castValue = Expression.Convert(valueParam, type);
-        //MethodCallExpression call = Expression.Call(null, writeInfo, writerParam, castValue);
-        //Action<BinaryWriter, object> write = Expression.Lambda<Action<BinaryWriter, object>>(call, writerParam, valueParam).Compile();
         _converters[type] = buildConverter.MakeGenericMethod(type).Invoke(null, new object[] { readInfo, writeInfo }) as BinaryConverter;
       }
 
-      foreach((Type type, bool incPublic, bool canNew) in autoTypes)
+      MethodInfo schemaConverter = typeof(BinarySerialization).GetMethod("BuildSchemaConverter", BindingFlags.Static);
+
+      foreach((Type type, bool incPublic) in autoTypes)
       {
-        BinarySerializationSchema schema = new(type, incPublic, canNew, allTypes);
-        _convertibles[type] = new ConvertibleInfo() { Read = schema.Read, Write = schema.Write };
+        _converters[type] = schemaConverter.MakeGenericMethod(type).Invoke(null, new object[] { incPublic, allTypes }) as BinaryConverter;
       }
     }
 
-    private static string FailedGetWriteMessage(string typeName) => $"Failed to find the Binary Write method for the Type '{typeName}'";
-    private static string FailedWriteMessage(string typeName) => $"Failed to write to BinaryWriter as Type '{typeName}'";
-    private static string FailedGetReadMessage(string typeName) => $"Failed to find the Binary Read method for the Type '{typeName}'";
-    private static string FailedReadMessage(string typeName) => $"Failed to read from the BinaryReader as Type '{typeName}'";
+    private static BinaryConverter BuildManualConverter<T>(MethodInfo readInfo, MethodInfo writeInfo)
+    {
+      return new BinaryConverter<T>(
+        DelegateBuilder.Func<BinaryReader, T>(readInfo),
+        DelegateBuilder.Action<BinaryWriter, T>(writeInfo)
+      );
+    }
+
+    private static BinaryConverter BuildSchemaConverter<T>(bool incPublic, HashSet<Type> allowedTypes)
+    {
+      return new BinarySchemaConverter<T>(incPublic, allowedTypes);
+    }
+
+    private static bool TryBuildEnumerableConverter(Type type, out BinaryConverter converter)
+    {
+      Type innerType = null;
+      if(type.IsArray)
+      {
+        innerType = type.GetElementType();
+      }
+      else
+      {
+        Type[] iEnums = type.GetEnumerableTypes().ToArray();
+        if(iEnums.Length == 1)
+        {
+          innerType = iEnums[0].GenericTypeArguments[0];
+        }
+      }
+
+      converter = innerType != null && !IsSerializable(innerType, true)
+        ? _enumerableBuilder.MakeGenericMethod(type, innerType).Invoke(null, new object[0]) as BinaryConverter
+        : null;
+
+      return converter != null;
+    }
+
+    private static BinaryConverter BuildEnumerableConverter<T, TItem>()
+    {
+      if(!Creators<IEnumerable<TItem>>.HasCreator<T>()) { return null; }
+      return new BinaryEnumerableConverter<T, TItem>();
+    }
 
   }
 }

@@ -1,6 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System;
+using System.Linq;
 
 
 namespace WrathTools
@@ -45,6 +46,16 @@ namespace WrathTools
       => SelectionEnumerable(collection, selection).GetEnumerator();
     public static IEnumerator<T2> SelectionEnumerator<T1, T2>(ICollection<T1> collection, Func<T1, T2> selection, Func<T1, bool> predicate)
       => SelectionEnumerable(collection, selection, predicate).GetEnumerator();
+
+    public static IEnumerable<Type> GetEnumerableTypes(this Type type)
+    {
+      return type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+    }
+
+    public static bool IsEnumerable(this Type type, bool includeArray = true)
+    {
+      return (includeArray && type.IsArray) || type.GetEnumerableTypes().Count() > 0;
+    }
 
   }
 }

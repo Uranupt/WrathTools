@@ -6,21 +6,24 @@ using System.Reflection;
 
 namespace WrathTools
 {
-  public class BinaryConverter
+  public abstract class BinaryConverter
   {
 
-    public readonly Func<BinaryReader, object> Read;
-    public readonly Action<BinaryWriter, object> Write;
+    public Func<BinaryReader, object> Read { get; private set; }
+    public Action<BinaryWriter, object> Write { get; private set; }
+    public abstract Type Type { get; }
 
-    internal static BinaryConverter BuildGeneric<T>(MethodInfo readInfo, MethodInfo writeInfo)
+    protected BinaryConverter()
     {
-      return new BinaryConverter<T>(
-        DelegateBuilder.Func<BinaryReader, T>(readInfo),
-        DelegateBuilder.Action<BinaryWriter, T>(writeInfo)
-      );
+
     }
 
-    internal BinaryConverter(Func<BinaryReader, object> read, Action<BinaryWriter, object> write)
+    protected BinaryConverter(Func<BinaryReader, object> read, Action<BinaryWriter, object> write)
+    {
+      SetMethods(read, write);
+    }
+
+    protected void SetMethods(Func<BinaryReader, object> read, Action<BinaryWriter, object> write)
     {
       Read = read;
       Write = write;
