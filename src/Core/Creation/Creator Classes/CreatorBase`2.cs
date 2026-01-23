@@ -8,8 +8,8 @@ namespace WrathTools
 
     private readonly ArgsSignature _signature = new(new Type[] { typeof(TArg) });
 
-    public override Type CreatedType => typeof(TResult);
-    public override ArgsSignature Signature => _signature;
+    public sealed override Type CreatedType => typeof(TResult);
+    public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(TArg arg);
 
@@ -27,7 +27,7 @@ namespace WrathTools
       return Create((TArg)args[0]);
     }
 
-    public override bool TryCreate(out object value, params object[] args)
+    public sealed override bool TryCreate(out object value, params object[] args)
     {
       if(!Signature.CanAccept(args))
       {

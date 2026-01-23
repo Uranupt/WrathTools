@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 
 namespace WrathTools
 {
-  public static class Creators
+  public static partial class Creators
   {
 
     /// <remarks> Do not use this name for custom <see cref="ICreator"/>s, only for equality checking and debugging. </remarks>
@@ -30,28 +30,45 @@ namespace WrathTools
     private static MethodInfo _newCreatorInfo = typeof(Creators).GetMethod("NewCreator");
     private static MethodInfo _newConstructorInfo = typeof(Creators).GetMethod("GenericConstructorCreator", BindingFlags.Static);
 
-    public static bool TryGetCollection(this Type type, out ICreator creator, bool create = false)
+    public static bool TryGetCollection(Type type, out ICreatorCollection collection, bool discoverConstructors)
     {
-
+      bool resl = discoverConstructors
+        ? TryDiscoverConstructors(type, out CreatorCollectionBase coll)
+        : Collections.TryGetValue(type, out coll);
+      collection = coll;
+      return resl;
     }
+
+    public static bool TryGetCollection(Type type, out ICreatorCollection collection) => TryGetCollection(type, out collection, false);
 
     public static bool TryGetCreator(this Type type, out ICreator creator, string name,
       bool exactArgLength, bool exactArgTypes, bool discoverConstructors, params Type[] argTypes)
     {
-      if(!SelfCreators.TryGetValue(type, out creator))
+      if(TryGetCollection(type, out ICreatorCollection collection, discoverConstructors))
       {
-        if(includeNew)
-        {
-          ConstructorInfo newInfo = type.GetConstructor(Type.EmptyTypes);
-          if(newInfo != null)
-          {
-            creator = NewConstructorCreator(type, newInfo);
-            _selfCreators[type] = creator;
-          }
-        }
+        return collection.TryGetCreator(out creator, name, exactArgLength, exactArgTypes, argTypes);
       }
-      return creator != null;
+      creator = null;
+      return false;
     }
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, string name, bool exactArgLength, bool exactArgTypes,
+      params Type[] argTypes) => TryGetCreator(type, out creator, name, exactArgLength, exactArgTypes, false, argTypes);
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, string name, bool discoverConstructors, params Type[] argTypes)
+      => TryGetCreator(type, out creator, name, false, false, discoverConstructors, argTypes);
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, string name, params Type[] argTypes)
+      => TryGetCreator(type, out creator, name, false, false, false, argTypes);
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, bool exactArgLength, bool exactArgTypes,
+      bool discoverConstructors, params Type[] argTypes) => TryGetCreator(type, out creator, exactArgLength, exactArgTypes, discoverConstructors, argTypes);
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, bool exactArgLength, bool exactArgTypes, params Type[] argTypes)
+      => TryGetCreator(type, out creator, exactArgLength, exactArgTypes, argTypes);
+
+    public static bool TryGetCreator(this Type type, out ICreator creator, bool discoverConstructors, params Type[] argTypes)
+      => TryGetCreator(type, out creator, discoverConstructors, argTypes);
 
     private static void Initialize()
     {
@@ -71,6 +88,16 @@ namespace WrathTools
         ICreator creator = (ICreator)_newCreatorInfo.MakeGenericMethod(method.DeclaringType).Invoke(null, new object[] { method });
         _selfCreators[method.DeclaringType] = creator; 
       }
+    }
+
+    private static bool TryDiscoverConstructors(Type type, out CreatorCollectionBase collection)
+    {
+      if(_discoveredConstructors.Contains(type))
+      {
+        return Collections.TryGetValue(type, out collection);
+      }
+      _discoveredConstructors.Add(type);
+
     }
 
     private static ICreator NewCreator<T>(MethodInfo createMethod)
