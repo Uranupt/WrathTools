@@ -23,7 +23,7 @@ namespace WrathTools
       Types = new Type[args.Length];
       for(int i = 0; i < args.Length; i++)
       {
-        Types[i] = args.GetType();
+        Types[i] = args[i].GetType();
       }
       _hash = BuildHash(Types);
     }
@@ -65,6 +65,34 @@ namespace WrathTools
       for(int i = 0; i < Types.Length; i++)
       {
         if(!Types[i].IsAssignableFrom(args[i].GetType())) { return false; }
+      }
+      return true;
+    }
+
+    public bool ArgsTypeMatch(bool allowOverflow, params Type[] argTypes)
+    {
+      if(argTypes.Length < Types.Length 
+        || (!allowOverflow && argTypes.Length != Types.Length)) 
+      { 
+        return false; 
+      }
+      for(int i = 0; i < Types.Length; i++)
+      {
+        if(Types[i] != argTypes[i]) { return false; }
+      }
+      return true;
+    }
+
+    public bool ArgsTypeMatch(bool allowOverflow, params object[] args)
+    {
+      if(args.Length < Types.Length
+        || (!allowOverflow && args.Length != Types.Length))
+      {
+        return false;
+      }
+      for(int i = 0; i < Types.Length; i++)
+      {
+        if(Types[i] != args[i].GetType()) { return false; }
       }
       return true;
     }
