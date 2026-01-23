@@ -6,10 +6,10 @@ namespace WrathTools
   public abstract class CreatorBase<TResult> : CreatorBase, ICreator<TResult>
   {
 
-    private readonly Type[] _argumentTypes = new Type[0];
+    private readonly ArgsSignature _signature = new(new Type[0]);
 
     public override Type CreatedType => typeof(TResult);
-    public override Type[] ArgumentTypes => _argumentTypes;
+    public override ArgsSignature Signature => _signature;
 
     public abstract TResult Create();
 

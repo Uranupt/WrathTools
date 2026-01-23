@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.ConstrainedExecution;
+using System.Xml.Linq;
 
 
 namespace WrathTools
@@ -7,134 +10,134 @@ namespace WrathTools
   public abstract class CreatorCollectionBase : ICreatorCollection
   {
 
-    protected virtual HashSet<ICreator> Creators { get; set; } = new();
+    protected virtual Dictionary<ArgsSignature, HashSet<ICreator>> CreatorsByArgs { get; } = new();
 
     public abstract Type CreatedType { get; }
 
-    public bool HasCreator(params Type[] args) => TryGetCreator(out _, args);
+    public bool HasCreator(params Type[] argTypes) => TryGetCreator(out _, argTypes);
+    public bool HasCreator(string name, params Type[] argTypes)
+      => TryGetCreator(out _, name, argTypes);
+    public bool HasCreator(bool exactArgMatch, params Type[] argTypes) => TryGetCreator(out _, exactArgMatch);
+    public bool HasCreator(string name, bool exactArgMatch, params Type[] argTypes)
+      => TryGetCreator(out _, name, exactArgMatch, argTypes);
 
-    public bool TryGetCreator(out ICreator creator, params Type[] args)
+    public bool TryGetCreator(out ICreator creator, params Type[] argTypes)
+      => TryGetCreator(out creator, Creators.DefaultCreatorName, false, argTypes);
+
+    public bool TryGetCreator(out ICreator creator, string name, params Type[] argTypes)
+      => TryGetCreator(out creator, name, false, argTypes);
+
+    public bool TryGetCreator(out ICreator creator, bool exactArgMatch, params Type[] argTypes)
+      => TryGetCreator(out creator, Creators.DefaultCreatorName, exactArgMatch, argTypes);
+
+    public bool TryGetCreator(out ICreator creator, string name, bool exactArgMatch, params Type[] argTypes)
     {
-      foreach(ICreator ctr in Creators)
+      IEnumerable<ICreator> pool;
+      if(exactArgMatch)
       {
-        if(ArgumentCheck(args, ctr.ArgumentTypes))
-        {
-          creator = ctr;
-          return true;
-        }
+        CreatorsByArgs.TryGetValue(new ArgsSignature(argTypes), out HashSet<ICreator> list);
+        pool = list;
+      }
+      else
+      {
+        pool = CreatorsByArgs.Where(p => p.Key.CanAccept(argTypes)).SelectMany(p => p.Value);
       }
       creator = null;
-      return false;
-    }
-
-    public bool TryCreate(out object value, params object[] args)
-    {
-      foreach(ICreator creator in Creators)
+      if(pool == null){ return false; }
+      if(name != Creators.DefaultCreatorName)
       {
-        if(ArgumentCheck(args, creator.ArgumentTypes))
+        pool = pool.Where(c => c.Name == name);
+      }
+
+      foreach(ICreator ctr in pool)
+      {
+        if(creator == null)
         {
-          value = creator.Create(args);
-          return true;
+          creator = ctr;
+          continue;
+        }
+        if(creator.Signature.Types.Length > ctr.Signature.Types.Length) { continue; }
+        if((creator.Name != name && ctr.Name == name)
+          || creator.Signature.Types.Length < ctr.Signature.Types.Length)
+        {
+          creator = ctr;
+          continue;
+        }
+        for(int i = 0; i < ctr.Signature.Types.Length; i++)
+        {
+          switch(
+            (ctr.Signature.Types[i] == argTypes[i], creator.Signature.Types[i] == argTypes[i])
+          )
+          {
+            case (false, false):
+            case (true, true):
+            {
+              if(i == ctr.Signature.Types.Length - 1)
+              {
+                //If two have no name preference, no length preference, and no Type match preference, choice is ambiguous.
+                return false; 
+              }
+              continue;
+            }
+            case (true, false):
+            {
+              creator = ctr;
+              break;
+            }
+            case (false, true):
+            {
+              break;
+            }
+          }
+          break;
         }
       }
-      value = default;
-      return false;
+      return creator != null;
     }
 
-    public bool TryCreateAs<T>(out T value, params object[] args)
-    {
-      if(!typeof(T).IsAssignableFrom(CreatedType) && TryCreate(out object resl, args))
-      {
-        value = (T)resl;
-        return true;
-      }
-      value = default;
-      return false;
-    }
+    public ICreator GetCreator(params Type[] argTypes) => GetCreator(Creators.DefaultCreatorName, false, argTypes);
+    public ICreator GetCreator(string name, params Type[] argTypes) => GetCreator(name, false, argTypes);
+    public ICreator GetCreator(bool exactArgMatch, params Type[] argTypes) => GetCreator(Creators.DefaultCreatorName, exactArgMatch, argTypes);
 
-    public object Create(params object[] args)
+    public ICreator GetCreator(string name, bool exactArgMatch, params Type[] argTypes)
     {
-      if(!TryCreate(out object value, args))
+      if(!TryGetCreator(out ICreator creator, name, exactArgMatch, argTypes))
       {
+        string msg = name != Creators.DefaultCreatorName
+          ? $"Failed to find a Creator for the Type '{CreatedType.Name}' named '{name}' with the argument Types: {TypesToString(argTypes)}"
+          : $"Failed to find a Creator for the Type '{CreatedType.Name}' with the argument Types: {TypesToString(argTypes)}";
         Diagnostics.LogError(
-          new ArgumentException(GetArgumentErrorMessage(args)),
-          stackTrace: new(true)
-        );
-      }
-      return value;
-    }
-
-    public T CreateAs<T>(params object[] args)
-    {
-      if(typeof(T).IsAssignableFrom(CreatedType))
-      {
-        Diagnostics.LogError(
-          new InvalidOperationException($"The CreatorCollection for Type '{CreatedType.Name}' cannot create an " +
-          $"instance assignable to the Type '{typeof(T).Name}'"),
-          stackTrace: new(true)
-        );
-      }
-      return (T)Create(args);
-    }
-
-    public ICreator GetCreator(params Type[] args)
-    {
-      if(!TryGetCreator(out ICreator creator, args))
-      {
-        Diagnostics.LogError(
-          new ArgumentException(GetArgumentErrorMessage(args)),
+          new Exception(msg),
           stackTrace: new(true)
         );
       }
       return creator;
     }
 
-    protected bool ArgumentCheck(Type[] providedArgs, Type[] creatorArgs)
+    protected bool AddCreator(ICreator creator)
     {
-      if(providedArgs.Length != creatorArgs.Length) { return false; }
-      for(int i = 0; i < providedArgs.Length; i++)
+      if(!CreatorsByArgs.TryGetValue(creator.Signature, out HashSet<ICreator> set))
       {
-        if(creatorArgs[i].IsAssignableFrom(providedArgs[i])) { return false; }
+        set = new HashSet<ICreator>();
+        CreatorsByArgs[creator.Signature] = set;
       }
+      foreach(ICreator other in set)
+      {
+        if(other != creator && other.Name == creator.Name) { return false; }
+      }
+      set.Add(creator);
       return true;
     }
 
-    protected bool ArgumentCheck(object[] providedArgs, Type[] creatorArgs)
+    protected string TypesToString(params Type[] args)
     {
-      if(providedArgs.Length != creatorArgs.Length) { return false; }
-      for(int i = 0; i < providedArgs.Length; i++)
-      {
-        if(!creatorArgs[i].IsAssignableFrom(providedArgs[i].GetType())) { return false; }
-      }
-      return true;
-    }
-
-    protected string GetArgumentErrorMessage(params object[] args)
-    {
-      if(args.Length == 0)
-      {
-        return $"Failed to find a Creator for the Type '{CreatedType}' with no arguments.";
-      }
-      string argTypes = $"'{args[0].GetType().Name}'";
-      for(int i = 0; i < args.Length; i++)
-      {
-        argTypes += $", '{args[i].GetType().Name}'";
-      }
-      return $"Failed to find a Creator for the Type '{CreatedType}' with the argument Types: {argTypes}";
-    }
-
-    protected string GetArgumentErrorMessage(params Type[] args)
-    {
-      if(args.Length == 0)
-      {
-        return $"Failed to find a Creator for the Type '{CreatedType}' with no arguments.";
-      }
+      if(args.Length == 0) { return "None"; }
       string argTypes = $"'{args[0].Name}'";
-      for(int i = 0; i < args.Length; i++)
+      for(int i = 1; i < args.Length; i++)
       {
         argTypes += $", '{args[i].Name}'";
       }
-      return $"Failed to find a Creator for the Type '{CreatedType}' with the argument Types: {argTypes}";
+      return argTypes;
     }
 
   }

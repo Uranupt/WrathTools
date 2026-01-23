@@ -7,10 +7,9 @@ namespace WrathTools
   public sealed class BinarySerializableAttribute : Attribute
   {
 
-    public bool Manual;
     public bool SerializePublic;
 
-    public BinarySerializableAttribute(bool serializePublic = false)
+    public BinarySerializableAttribute(bool serializePublic)
     {
       SerializePublic = serializePublic;
     }

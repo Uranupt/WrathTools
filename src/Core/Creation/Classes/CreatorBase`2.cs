@@ -6,10 +6,10 @@ namespace WrathTools
   public abstract class CreatorBase<TArg, TResult> : CreatorBase, ICreator<TArg, TResult>
   {
 
-    private readonly Type[] _argumentTypes = new Type[] { typeof(TArg) };
+    private readonly ArgsSignature _signature = new(new Type[] { typeof(TArg) });
 
     public override Type CreatedType => typeof(TResult);
-    public override Type[] ArgumentTypes => _argumentTypes;
+    public override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(TArg arg);
 
@@ -17,7 +17,7 @@ namespace WrathTools
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
-      if(!ArgumentCheck(args))
+      if(!Signature.CanAccept(args))
       {
         Diagnostics.LogError(
           new ArgumentException(GetArgumentErrorMessage(args)),
@@ -29,13 +29,13 @@ namespace WrathTools
 
     public override bool TryCreate(out object value, params object[] args)
     {
-      if(ArgumentCheck(args))
+      if(!Signature.CanAccept(args))
       {
-        value = Create((TArg)args[0]);
-        return true;
+        value = default;
+        return false;
       }
-      value = default;
-      return false;
+      value = Create((TArg)args[0]);
+      return true;
     }
 
   }

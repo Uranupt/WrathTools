@@ -7,7 +7,8 @@ namespace WrathTools
   {
 
     Type CreatedType { get; }
-    Type[] ArgumentTypes { get; }
+    ArgsSignature Signature { get; }
+    public string Name { get; }
     bool TryCreate(out object value, params object[] args);
     bool TryCreateAs<T>(out T value, params object[] args);
     object Create(params object[] args);

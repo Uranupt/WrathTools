@@ -9,7 +9,8 @@ namespace WrathTools
     private string _argumentNames;
 
     public abstract Type CreatedType { get; }
-    public abstract Type[] ArgumentTypes { get; }
+    public abstract ArgsSignature Signature { get; }
+    public abstract string Name { get; }
 
     public string ArgumentNames
     {
@@ -17,16 +18,16 @@ namespace WrathTools
       {
         if(_argumentNames == null)
         {
-          if(ArgumentTypes.Length == 0)
+          if(Signature.Types.Length == 0)
           {
             _argumentNames = "None";
           }
           else
           {
-            _argumentNames = $"'{ArgumentTypes[0].Name}'";
-            for(int i = 1; i < ArgumentTypes.Length; i++)
+            _argumentNames = $"'{Signature.Types[0].Name}'";
+            for(int i = 1; i < Signature.Types.Length; i++)
             {
-              _argumentNames += $", {ArgumentTypes[i].Name}";
+              _argumentNames += $", {Signature.Types[i].Name}";
             }
           }
         }
@@ -70,26 +71,6 @@ namespace WrathTools
         );
       }
       return (T)Create(args);
-    }
-
-    public bool ArgumentCheck(params object[] args)
-    {
-      if(args.Length != ArgumentTypes.Length) { return false; }
-      for(int i = 0; i < args.Length; i++)
-      {
-        if(!ArgumentTypes[i].IsAssignableFrom(args[i].GetType())) { return false; }
-      }
-      return true;
-    }
-
-    public bool ArgumentCheck(params Type[] args)
-    {
-      if(args.Length != ArgumentTypes.Length) { return false; }
-      for(int i = 0; i < args.Length; i++)
-      {
-        if(!ArgumentTypes[i].IsAssignableFrom(args[i])) { return false; }
-      }
-      return true;
     }
 
     protected string GetArgumentErrorMessage(params object[] args)

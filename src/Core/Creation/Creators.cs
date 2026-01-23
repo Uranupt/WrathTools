@@ -11,6 +11,11 @@ namespace WrathTools
   public static class Creators
   {
 
+    /// <remarks> Do not use this name for custom <see cref="ICreator"/>s, only for equality checking and debugging. </remarks>
+    public const string DefaultCreatorName = "default";
+    /// <remarks> Do not use this name for custom <see cref="ICreator"/>s, only for equality checking and debugging. </remarks>
+    public const string ConstructorName = "ctr";
+
     private static bool _initialized;
     private static Dictionary<Type, ICreator> _selfCreators = new();
     private static Dictionary<Type, ICreator> SelfCreators
@@ -146,7 +151,7 @@ namespace WrathTools
         .SelectMany(a => a.GetTypes())
         .SelectMany(t => t.GetMethods())
         .Where(m => m.IsStatic && !m.IsGenericMethod
-          && m.GetCustomAttribute<SelfCreatorAttribute>() != null
+          && m.GetCustomAttribute<CreatorAttribute>() != null
           && m.GetParameters().Length == 0
           && m.ReturnType == m.DeclaringType)
         .ToArray();
