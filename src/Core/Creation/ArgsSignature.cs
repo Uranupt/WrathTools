@@ -8,30 +8,33 @@ namespace WrathTools
 
     private const int HashSeed = 33;
     private const int HashPrime = 47;
+    private const int EmptyHash = HashSeed * HashPrime;
 
     private readonly int _hash;
-    public readonly Type[] Types;
+    private readonly Type[] _types;
+
+    private int Hash => _types != null ? _hash : EmptyHash;
+    public Type[] Types => _types ?? Array.Empty<Type>();
 
     public ArgsSignature(Type[] types)
     {
-      Types = types;
+      _types = types;
       _hash = BuildHash(types);
     }
 
     public ArgsSignature(object[] args)
     {
-      Types = new Type[args.Length];
+      _types = new Type[args.Length];
       for(int i = 0; i < args.Length; i++)
       {
-        Types[i] = args[i].GetType();
+        _types[i] = args[i].GetType();
       }
-      _hash = BuildHash(Types);
+      _hash = BuildHash(_types);
     }
 
     private static int BuildHash(Type[] types)
     {
-      int resl = HashSeed;
-      resl = (resl * HashPrime) + types.Length;
+      int resl = EmptyHash + types.Length;
       for(int i = 0; i < types.Length; i++)
       {
         resl = (resl * HashPrime) + types[i].GetHashCode();
@@ -47,7 +50,7 @@ namespace WrathTools
       return other is ArgsSignature oSig && oSig.GetHashCode() == GetHashCode();
     }
 
-    public override int GetHashCode() => _hash;
+    public override int GetHashCode() => Hash;
 
     public bool CanAccept(params Type[] types)
     {

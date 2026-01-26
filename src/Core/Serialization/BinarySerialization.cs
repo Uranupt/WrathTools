@@ -9,29 +9,17 @@ using System.Reflection;
 
 namespace WrathTools
 {
-  public static class BinarySerialization
+  public static partial class BinarySerialization
   {
 
-    private static bool _initialized;
-    private static MethodInfo _enumerableBuilder = typeof(BinarySerialization).GetMethod("BuildEnumerableConverter", BindingFlags.Static);
+    internal const string DefaultConverterName = "default";
 
-    private static readonly Dictionary<Type, BinaryConverter> _converters = new()
-    {
-      [typeof(bool)] = new BinaryConverter<bool>(r => r.ReadBoolean(), (w, v) => w.Write(v)),
-      [typeof(byte)] = new BinaryConverter<byte>(r => r.ReadByte(), (w, v) => w.Write(v)),
-      [typeof(sbyte)] = new BinaryConverter<sbyte>(r => r.ReadSByte(), (w, v) => w.Write(v)),
-      [typeof(short)] = new BinaryConverter<short>(r => r.ReadInt16(), (w, v) => w.Write(v)),
-      [typeof(ushort)] = new BinaryConverter<ushort>(r => r.ReadUInt16(), (w, v) => w.Write(v)),
-      [typeof(int)] = new BinaryConverter<int>(r => r.ReadInt32(), (w, v) => w.Write(v)),
-      [typeof(uint)] = new BinaryConverter<uint>(r => r.ReadUInt32(), (w, v) => w.Write(v)),
-      [typeof(long)] = new BinaryConverter<long>(r => r.ReadInt64(), (w, v) => w.Write(v)),
-      [typeof(ulong)] = new BinaryConverter<ulong>(r => r.ReadUInt64(), (w, v) => w.Write(v)),
-      [typeof(float)] = new BinaryConverter<float>(r => r.ReadSingle(), (w, v) => w.Write(v)),
-      [typeof(double)] = new BinaryConverter<double>(r => r.ReadDouble(), (w, v) => w.Write(v)),
-      [typeof(decimal)] = new BinaryConverter<decimal>(r => r.ReadDecimal(), (w, v) => w.Write(v)),
-      [typeof(char)] = new BinaryConverter<char>(r => r.ReadChar(), (w, v) => w.Write(v)),
-      [typeof(string)] = new BinaryConverter<string>(r => r.ReadString(), (w, v) => w.Write(v))
-    };
+    private static bool _initialized;
+    private static MethodInfo _enumerableBuilder = typeof(BinarySerialization).GetMethod("BuildEnumerableConverter", BindingFlags.Static | BindingFlags.NonPublic);
+    private static readonly object _initializeLock = new();
+    private static readonly object _enumerableLock = new();
+
+    private static readonly Dictionary<Type, BinaryConverterCollection> _collections = new();
 
     internal readonly static HashSet<Type> SystemSerialzableTypes = new()
     {
@@ -51,257 +39,231 @@ namespace WrathTools
       typeof(string)
     };
 
-    internal static Dictionary<Type, BinaryConverter> Converters
+    private static Dictionary<Type, BinaryConverterCollection> Collections
     {
       get
       {
         Initialize();
-        return _converters;
+        return _collections;
       }
     }
 
-    public static bool IsSerializable(Type type, bool includeEnumerable = false) => TryGetConverter(type, out _, includeEnumerable);
-    public static bool IsSerializable<T>(bool includeEnumerable = false) => IsSerializable(typeof(T), includeEnumerable);
-    public static bool IsSerializable(object obj, bool includeEnumerable = false) => IsSerializable(obj.GetType(), includeEnumerable);
-    public static bool IsBinarySerializable(this Type type, bool includeEnumerable = false) => IsSerializable(type, includeEnumerable);
-    public static bool IsBinarySerializable(this object obj, bool includeEnumerable = false) => IsSerializable(obj, includeEnumerable);
-
-
-    public static bool TryGetConverter(this Type type, out BinaryConverter converter, bool includeEnumerable)
+    internal static bool IsBaseTypeSerializable(Type type, IEnumerable<Type> includedTypes = null)
     {
-      if(!Converters.TryGetValue(type, out converter))
+      if(type.IsArray)
       {
-        if(includeEnumerable)
-        {
-          TryBuildEnumerableConverter(type, out converter);
-        }
+        return IsBaseTypeSerializable(type.GetElementType(), includedTypes);
       }
-      return converter != null;
-    }
-
-    public static bool TryGetConverter<T>(out BinaryConverter<T> converter, bool includeEnumerable = false)
-    {
-      converter = TryGetConverter(typeof(T), out BinaryConverter cvrt, includeEnumerable)
-        ? (BinaryConverter<T>)cvrt : null;
-      return converter != null;
-    }
-
-    public static bool TryGetWrite(Type type, out Action<BinaryWriter, object> write, bool includeEnumerable = false)
-    {
-      write = TryGetConverter(type, out BinaryConverter converter, includeEnumerable)
-        ? converter.Write : null;
-      return write != null;
-    }
-
-    public static bool TryGetWrite<T>(out Action<BinaryWriter, T> write, bool includeEnumerable = false)
-    {
-      write = TryGetConverter(out BinaryConverter<T> converter, includeEnumerable)
-        ? converter.Write : null;
-      return write != null;
-    }
-
-    public static bool TryGetRead(Type type, out Func<BinaryReader, object> read, bool includeEnumerable = false)
-    {
-      read = TryGetConverter(type, out BinaryConverter converter, includeEnumerable)
-        ? converter.Read : null;
-      return read != null;
-    }
-
-    public static bool TryGetRead<T>(out Func<BinaryReader, T> read, bool includeEnumerable = false)
-    {
-      read = TryGetConverter(out BinaryConverter<T> converter, includeEnumerable)
-        ? converter.Read : null;
-      return read != null;
-    }
-
-    public static bool TryWriteAs(this BinaryWriter writer, Type type, object value, bool runtimeCheck, bool includeEnumerable = false)
-    {
-      if(runtimeCheck && value.GetType() != type) { return false; }
-      if(TryGetWrite(type, out Action<BinaryWriter, object> write, includeEnumerable))
+      IEnumerable<Type> iEnumTypes = type.GetEnumerableTypes();
+      int count = iEnumTypes.Count();
+      if(count > 1) { return false; }
+      else if(count == 0)
       {
-        write?.Invoke(writer, value);
-        return true;
+        return type.IsBinarySerializable() ||
+          (includedTypes != null && includedTypes.Contains(type));
       }
-      return false;
+      return IsBaseTypeSerializable(iEnumTypes.First().GenericTypeArguments[0], includedTypes);
     }
-
-    public static bool TryWriteAs<T>(this BinaryWriter writer, T value, bool includeEnumerable = false)
-    {
-      if(TryGetWrite(out Action<BinaryWriter, T> write, includeEnumerable))
-      {
-        write?.Invoke(writer, value);
-        return true;
-      }
-      return false;
-    }
-
-    public static bool TryWriteAsRuntime(this BinaryWriter writer, object value, bool includeEnumerable = false)
-      => TryWriteAs(writer, value.GetType(), false, includeEnumerable);
-
-    public static bool TryReadAs(this BinaryReader reader, Type type, out object value, bool includeEnumerable = false)
-    {
-      if(TryGetRead(type, out Func<BinaryReader, object> read, includeEnumerable))
-      {
-        value = read?.Invoke(reader);
-        return true;
-      }
-      value = default;
-      return false;
-    }
-
-    public static bool TryReadAs<T>(this BinaryReader reader, out T value, bool includeEnumerable = false)
-    {
-      if(TryGetRead(out Func<BinaryReader, T> read, includeEnumerable))
-      {
-        value = read.Invoke(reader);
-        return true;
-      }
-      value = default;
-      return false;
-    }
-
-    public static BinaryConverter GetConverter(Type type)
-    {
-      if(!TryGetConverter(type, out BinaryConverter converter, true))
-      {
-        Diagnostics.LogError(
-          new Exception($"Failed to find a BinaryConverter for the Type '{type.Name}'"),
-          stackTrace: new(true)
-        );
-      }
-      return converter;
-    }
-
-    public static BinaryConverter<T> GetConverter<T>() => (BinaryConverter<T>)GetConverter(typeof(T));
-    public static BinaryConverter GetBinaryConverter(this Type type) => GetConverter(type);
-
-    public static Action<BinaryWriter, object> GetWrite(Type type) => GetConverter(type).Write;
-    public static Action<BinaryWriter, T> GetWrite<T>() => GetConverter<T>().Write;
-
-    public static void WriteAs(this BinaryWriter writer, Type type, object value) => GetWrite(type).Invoke(writer, value);
-    public static void WriteAs<T>(this BinaryWriter writer, T value) => GetWrite<T>().Invoke(writer, value);
-    public static void WriteAsRuntime(this BinaryWriter writer, object value) => WriteAs(writer, value.GetType(), value);
-
-    public static Func<BinaryReader, object> GetRead(Type type) => GetConverter(type).Read;
-    public static Func<BinaryReader, T> GetRead<T>() => GetConverter<T>().Read;
-
-    public static object ReadAs(this BinaryReader reader, Type type) => GetRead(type).Invoke(reader);
-    public static T ReadAs<T>(this BinaryReader reader) => GetRead<T>().Invoke(reader);
 
     private static void Initialize()
     {
       if(_initialized) { return; }
-      _initialized = true;
-      IEnumerable<(Type, BinarySerializableAttribute)> types = AppDomain.CurrentDomain.GetAssemblies()
-        .SelectMany(a => a.GetTypes())
-        .Select(t => (type: t, attr: (BinarySerializableAttribute)t.GetCustomAttributes(typeof(BinarySerializableAttribute)).FirstOrDefault()))
-        .Where(p => p.type != null && p.type.IsSealed && p.attr != null);
-      HashSet<Type> allTypes = new();
-      List<Type> manualTypes = new();
-      List<(Type, bool)> autoTypes = new();
-      foreach((Type type, BinarySerializableAttribute attr) in types)
+      lock(_initializeLock)
       {
-        if(attr.Manual)
-        {
-          manualTypes.Add(type);
-        }
-        else if(type.HasCreator(true))
-        {
-          autoTypes.Add((type, attr.SerializePublic));
-        }
-        else
-        {
-          continue;
-        }
-        allTypes.Add(type);
-      }
+        if(_initialized) { return; }
 
-      static bool ParamCheck(ParameterInfo[] parameters, params Type[] paramTypes)
-      {
-        if(parameters.Length != paramTypes.Length) { return false; }
-        for(int i = 0; i < parameters.Length; i++)
+        static IEnumerable<BinarySerializerBuildInfo> GetBuildInfos(Type t)
         {
-          if(parameters[i].ParameterType !=  paramTypes[i]) { return false; }
-        }
-        return true;
-      }
-
-      MethodInfo buildConverter = typeof(BinarySerialization).GetMethod("BuildManualConverter", BindingFlags.Static);
-
-      foreach(Type type in manualTypes)
-      {
-        MethodInfo readInfo = null;
-        MethodInfo writeInfo = null;
-        foreach(MethodInfo method in type.GetMethods(BindingFlags.Static | BindingFlags.Public))
-        {
-          if(method.Name == "Read" && method.ReturnType == type
-            && ParamCheck(method.GetParameters(), typeof(BinaryReader)))
+          foreach(BinarySerializableAttribute attr in t.GetCustomAttributes<BinarySerializableAttribute>())
           {
-            readInfo = method;
+            yield return new BinarySerializerBuildInfo(t, attr);
           }
-          if(method.Name == "Write" && ParamCheck(method.GetParameters(), typeof(BinaryWriter), type))
+          foreach(BinarySerializerAttribute attr in t.GetCustomAttributes<BinarySerializerAttribute>())
           {
-            writeInfo = method;
+            yield return new BinarySerializerBuildInfo(t, attr);
           }
         }
-        if(readInfo == null || writeInfo == null)
+
+        static bool ParamCheck(ParameterInfo[] parameters, params Type[] paramTypes)
         {
-          Diagnostics.LogWarning($"The Type '{type.Name}' marked with the BinarySerializable Attribute is missing one or both of the required Read and Write methods." +
-            $" \n Read Missing: {readInfo == null}, Write Missing: {writeInfo == null} ");
-          allTypes.Remove(type);
-          continue;
+          if(parameters.Length != paramTypes.Length) { return false; }
+          for(int i = 0; i < parameters.Length; i++)
+          {
+            if(parameters[i].ParameterType != paramTypes[i]) { return false; }
+          }
+          return true;
         }
-        _converters[type] = buildConverter.MakeGenericMethod(type).Invoke(null, new object[] { readInfo, writeInfo }) as BinaryConverter;
-      }
 
-      MethodInfo schemaConverter = typeof(BinarySerialization).GetMethod("BuildSchemaConverter", BindingFlags.Static);
 
-      foreach((Type type, bool incPublic) in autoTypes)
-      {
-        _converters[type] = schemaConverter.MakeGenericMethod(type).Invoke(null, new object[] { incPublic, allTypes }) as BinaryConverter;
+        InitializeSystemTypes();
+        Assembly assembly = typeof(BinarySerialization).Assembly;
+        AssemblyName assemblyName = assembly.GetName();
+        IEnumerable<Assembly> relevantAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+          .Where(a => a == assembly
+            || a.GetReferencedAssemblies().Any(r => AssemblyName.ReferenceMatchesDefinition(r, assemblyName))
+          );
+
+        BinarySerializerBuildInfo[] buildInfos = relevantAssemblies.SelectMany(a => a.GetTypes())
+          .Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(BinarySerializableAttribute)
+            || a.AttributeType == typeof(BinarySerializerAttribute))
+          )
+          .SelectMany(t => GetBuildInfos(t))
+          .ToArray();
+
+        MethodInfo manualConverterMethod = typeof(BinarySerialization).GetMethod("BuildManualConverter", BindingFlags.Static | BindingFlags.NonPublic);
+        MethodInfo schemaConverterMethod = typeof(BinarySerialization).GetMethod("BuildSchemaConverter", BindingFlags.Static | BindingFlags.NonPublic);
+
+        HashSet<Type> autoTypes = new();
+        List<BinarySerializerBuildInfo> autoSerializers = new();
+
+        foreach(BinarySerializerBuildInfo info in buildInfos)
+        {
+          if(info.Behavior != SerializationBehavior.Manual)
+          {
+            if(info.TargetedType.HasCreator(true))
+            {
+              autoTypes.Add(info.TargetedType);
+              autoSerializers.Add(info);
+            }
+            else
+            {
+              Diagnostics.LogWarning(
+                $"The Type '{info.TargetedType}' marked with the BinarySerializable Attribute does not have any available parameterless" +
+                $" constructors or parameterless Creators. Unable to build a serialization schema."
+              );
+            }
+            continue;
+          }
+          MethodInfo readInfo = null;
+          MethodInfo writeInfo = null;
+          foreach(MethodInfo method in info.DeclaringType.GetMethods(BindingFlags.Static | BindingFlags.Public))
+          {
+            if(method.Name == "Read" && method.ReturnType == info.TargetedType
+              && ParamCheck(method.GetParameters(), typeof(BinaryReader)))
+            {
+              readInfo = method;
+            }
+            if(method.Name == "Write" && ParamCheck(method.GetParameters(), typeof(BinaryWriter), info.TargetedType))
+            {
+              writeInfo = method;
+            }
+          }
+          if(readInfo == null || writeInfo == null)
+          {
+            Diagnostics.LogWarning($"The Type '{info.DeclaringType.Name}' marked with a Binary Serialization Attribute for the Type '{info.TargetedType.Name}' " +
+              $"is missing one or both of the required Read and Write methods. Read Missing: {readInfo == null}, Write Missing: {writeInfo == null} ");
+            continue;
+          }
+          BinaryConverter converter = (BinaryConverter)manualConverterMethod.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, readInfo, writeInfo });
+          GetOrBuildCollection(info.TargetedType).AddConverter(converter);
+        }
+
+        foreach(BinarySerializerBuildInfo info in autoSerializers)
+        {
+          BinaryConverter converter = (BinaryConverter)schemaConverterMethod.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, info.Behavior, autoTypes });
+          GetOrBuildCollection(info.TargetedType).AddConverter(converter);
+        }
+
+        _initialized = true;
       }
     }
 
-    private static BinaryConverter BuildManualConverter<T>(MethodInfo readInfo, MethodInfo writeInfo)
+    private static BinaryConverter BuildManualConverter<T>(string name, MethodInfo readInfo, MethodInfo writeInfo)
     {
       return new BinaryConverter<T>(
+        name,
         DelegateBuilder.Func<BinaryReader, T>(readInfo),
         DelegateBuilder.Action<BinaryWriter, T>(writeInfo)
       );
     }
 
-    private static BinaryConverter BuildSchemaConverter<T>(bool incPublic, HashSet<Type> allowedTypes)
+    private static BinaryConverter BuildSchemaConverter<T>(string name, SerializationBehavior behavior, HashSet<Type> autoTypes)
     {
-      return new BinarySchemaConverter<T>(incPublic, allowedTypes);
+      return new BinarySchemaConverter<T>(name, behavior, autoTypes);
     }
 
     private static bool TryBuildEnumerableConverter(Type type, out BinaryConverter converter)
     {
-      Type innerType = null;
-      if(type.IsArray)
+      lock(_enumerableLock)
       {
-        innerType = type.GetElementType();
-      }
-      else
-      {
-        Type[] iEnums = type.GetEnumerableTypes().ToArray();
-        if(iEnums.Length == 1)
+        if(_collections.TryGetValue(type, out BinaryConverterCollection collection))
         {
-          innerType = iEnums[0].GenericTypeArguments[0];
+          return collection.TryGetConverter(out converter);
         }
+        converter = null;
+        Type innerType = null;
+        if(type.IsArray)
+        {
+          innerType = type.GetElementType();
+        }
+        else
+        {
+          Type[] iEnums = type.GetEnumerableTypes().ToArray();
+          if(iEnums.Length == 1)
+          {
+            innerType = iEnums[0].GenericTypeArguments[0];
+          }
+        }
+        if(innerType != null && IsSerializable(innerType))
+        {
+          object resl = _enumerableBuilder.MakeGenericMethod(type, innerType).Invoke(null, new object[0]);
+          if(resl != null)
+          {
+            collection = GetOrBuildCollection(type);
+            converter = (BinaryConverter)resl;
+            collection.AddConverter(converter);
+          }
+        }
+        return converter != null;
       }
-
-      converter = innerType != null && !IsSerializable(innerType, true)
-        ? _enumerableBuilder.MakeGenericMethod(type, innerType).Invoke(null, new object[0]) as BinaryConverter
-        : null;
-
-      return converter != null;
     }
 
-    private static BinaryConverter BuildEnumerableConverter<T, TItem>()
+    private static BinaryConverter BuildEnumerableConverter<T, TItem>() where T : IEnumerable<TItem>
     {
-      if(!Creators<IEnumerable<TItem>>.HasCreator<T>()) { return null; }
-      return new BinaryEnumerableConverter<T, TItem>();
+      if(!typeof(T).HasCreator(typeof(IEnumerable<TItem>))){ return null; }
+      return new BinaryEnumerableConverter<T, TItem>(DefaultConverterName);
+    }
+
+    private static BinaryConverterCollection GetOrBuildCollection(Type type)
+    {
+      if(!_collections.TryGetValue(type, out BinaryConverterCollection collection))
+      {
+        _collections[type] = new(type);
+        collection = _collections[type];
+      }
+      return collection;
+    }
+
+    private static void InitializeSystemTypes()
+    {
+      _collections[typeof(bool)] = new(typeof(bool));
+      _collections[typeof(bool)].AddConverter(new BinaryConverter<bool>(DefaultConverterName, r => r.ReadBoolean(), (w, v) => w.Write(v)));
+      _collections[typeof(byte)] = new(typeof(byte));
+      _collections[typeof(byte)].AddConverter(new BinaryConverter<byte>(DefaultConverterName, r => r.ReadByte(), (w, v) => w.Write(v)));
+      _collections[typeof(sbyte)] = new(typeof(sbyte));
+      _collections[typeof(sbyte)].AddConverter(new BinaryConverter<sbyte>(DefaultConverterName, r => r.ReadSByte(), (w, v) => w.Write(v)));
+      _collections[typeof(short)] = new(typeof(short));
+      _collections[typeof(short)].AddConverter(new BinaryConverter<short>(DefaultConverterName, r => r.ReadInt16(), (w, v) => w.Write(v)));
+      _collections[typeof(ushort)] = new(typeof(ushort));
+      _collections[typeof(ushort)].AddConverter(new BinaryConverter<ushort>(DefaultConverterName, r => r.ReadUInt16(), (w, v) => w.Write(v)));
+      _collections[typeof(int)] = new(typeof(int));
+      _collections[typeof(int)].AddConverter(new BinaryConverter<int>(DefaultConverterName, r => r.ReadInt32(), (w, v) => w.Write(v)));
+      _collections[typeof(uint)] = new(typeof(uint));
+      _collections[typeof(uint)].AddConverter(new BinaryConverter<uint>(DefaultConverterName, r => r.ReadUInt32(), (w, v) => w.Write(v)));
+      _collections[typeof(long)] = new(typeof(long));
+      _collections[typeof(long)].AddConverter(new BinaryConverter<long>(DefaultConverterName, r => r.ReadInt64(), (w, v) => w.Write(v)));
+      _collections[typeof(ulong)] = new(typeof(ulong));
+      _collections[typeof(ulong)].AddConverter(new BinaryConverter<ulong>(DefaultConverterName, r => r.ReadUInt64(), (w, v) => w.Write(v)));
+      _collections[typeof(float)] = new(typeof(float));
+      _collections[typeof(float)].AddConverter(new BinaryConverter<float>(DefaultConverterName, r => r.ReadSingle(), (w, v) => w.Write(v)));
+      _collections[typeof(double)] = new(typeof(double));
+      _collections[typeof(double)].AddConverter(new BinaryConverter<double>(DefaultConverterName, r => r.ReadDouble(), (w, v) => w.Write(v)));
+      _collections[typeof(decimal)] = new(typeof(decimal));
+      _collections[typeof(decimal)].AddConverter(new BinaryConverter<decimal>(DefaultConverterName, r => r.ReadDecimal(), (w, v) => w.Write(v)));
+      _collections[typeof(char)] = new(typeof(char));
+      _collections[typeof(char)].AddConverter(new BinaryConverter<char>(DefaultConverterName, r => r.ReadChar(), (w, v) => w.Write(v)));
+      _collections[typeof(string)] = new(typeof(string));
+      _collections[typeof(string)].AddConverter(new BinaryConverter<string>(DefaultConverterName, r => r.ReadString(), (w, v) => w.Write(v)));
     }
 
   }

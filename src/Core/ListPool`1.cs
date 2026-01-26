@@ -9,11 +9,7 @@ namespace WrathTools
 
 		public static List<T> Get()
 		{
-			if(_pool.Count > 0)
-			{
-				return _pool.Pop();
-			}
-			return new List<T>();
+			return _pool.Count > 0 ? _pool.Pop() : new List<T>();
 		}
 
 		public static void Store(List<T> list)
@@ -22,14 +18,9 @@ namespace WrathTools
 			_pool.Push(list);
 		}
 
-	}
-
-	public static class ListPoolExtensions
-	{
-
-		public static void StoreInPool<T>(this List<T> list)
+		public static LeaseScope<List<T>> Lease()
 		{
-			ListPool<T>.Store(list);
+			return new LeaseScope<List<T>>(Get(), Store, true);
 		}
 
 	}

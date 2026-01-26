@@ -7,8 +7,15 @@ using System.Xml.Linq;
 
 namespace WrathTools
 {
-  public abstract class CreatorCollectionBase : ICreatorCollection, ICreatorCollectionInternal
+  public abstract class CreatorCollectionBase : ICreatorCollection
   {
+
+    private enum CompResponse
+    {
+      Equal,
+      Better,
+      Worse
+    }
 
     protected virtual Dictionary<ArgsSignature, HashSet<ICreator>> CreatorsByArgs { get; } = new();
 
@@ -26,13 +33,13 @@ namespace WrathTools
       => TryGetCreator(out _, name, exactArgCount, exactArgTypes, argTypes);
 
     public bool TryGetCreator(out ICreator creator, params Type[] argTypes)
-      => TryGetCreator(out creator, Creators.DefaultCreatorName, false, false, argTypes);
+      => TryGetCreator(out creator, null, false, false, argTypes);
 
     public bool TryGetCreator(out ICreator creator, string name, params Type[] argTypes)
       => TryGetCreator(out creator, name, false, false, argTypes);
 
     public bool TryGetCreator(out ICreator creator, bool exactArgLength, bool exactArgTypes, params Type[] argTypes)
-      => TryGetCreator(out creator, Creators.DefaultCreatorName, exactArgLength, exactArgTypes, argTypes);
+      => TryGetCreator(out creator, null, exactArgLength, exactArgTypes, argTypes);
 
     public bool TryGetCreator(out ICreator creator, string name, bool exactArgLength, bool exactArgTypes, params Type[] argTypes)
     {
@@ -53,8 +60,11 @@ namespace WrathTools
           .Where(c =>
             (!exactArgLength || c.Signature.Types.Length == argTypes.Length)
             && (!exactArgTypes || c.Signature.ArgsTypeMatch(true, argTypes))
-            && (name != Creators.DefaultCreatorName || c.Name == name)
           );
+      }
+      if(name != null)
+      {
+        pool = pool.Where(c => c.Name == name);
       }
       creator = null;
       foreach(ICreator ctr in pool)
@@ -64,9 +74,19 @@ namespace WrathTools
           creator = ctr;
           continue;
         }
+        if(name == null && creator.Name != ctr.Name)
+        {
+          if(creator.Name == Creators.DefaultCreatorName) { continue; }
+          if(ctr.Name == Creators.DefaultCreatorName
+            || ctr.Name == Creators.ConstructorName)
+          {
+            creator = ctr;
+            continue;
+          }
+          if(creator.Name == Creators.ConstructorName) { continue; }
+        }
         if(creator.Signature.Types.Length > ctr.Signature.Types.Length) { continue; }
-        if((creator.Name != name && ctr.Name == name)
-          || creator.Signature.Types.Length < ctr.Signature.Types.Length)
+        else if(creator.Signature.Types.Length < ctr.Signature.Types.Length)
         {
           creator = ctr;
           continue;
@@ -99,19 +119,19 @@ namespace WrathTools
       return creator != null;
     }
 
-    public ICreator GetCreator(params Type[] argTypes) => GetCreator(Creators.DefaultCreatorName, false, false, argTypes);
+    public ICreator GetCreator(params Type[] argTypes) => GetCreator(null, false, false, argTypes);
 
     public ICreator GetCreator(string name, params Type[] argTypes) 
       => GetCreator(name, false, false, argTypes);
 
     public ICreator GetCreator(bool exactArgLength, bool exactArgTypes, params Type[] argTypes) 
-      => GetCreator(Creators.DefaultCreatorName, exactArgLength, exactArgTypes, argTypes);
+      => GetCreator(null, exactArgLength, exactArgTypes, argTypes);
 
     public ICreator GetCreator(string name, bool exactArgLength, bool exactArgTypes, params Type[] argTypes)
     {
       if(!TryGetCreator(out ICreator creator, name, exactArgLength, exactArgTypes, argTypes))
       {
-        string msg = name != Creators.DefaultCreatorName
+        string msg = name != null
           ? $"Failed to find a Creator for the Type '{CreatedType.Name}' named '{name}' with the argument Types: {TypesToString(argTypes)}"
           : $"Failed to find a Creator for the Type '{CreatedType.Name}' with the argument Types: {TypesToString(argTypes)}";
         Diagnostics.LogError(
@@ -138,7 +158,7 @@ namespace WrathTools
       return true;
     }
 
-    bool ICreatorCollectionInternal.AddCreator(ICreator creator) => AddCreator(creator);
+    internal bool AddCreatorInternal(ICreator creator) => AddCreator(creator);
 
     protected string TypesToString(params Type[] args)
     {

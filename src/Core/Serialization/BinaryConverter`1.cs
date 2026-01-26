@@ -12,12 +12,12 @@ namespace WrathTools
     public new Action<BinaryWriter, T> Write { get; private set; }
     public override Type Type => typeof(T);
 
-    protected BinaryConverter()
+    protected BinaryConverter(string name) : base(name)
     {
-
+      
     }
 
-    internal BinaryConverter(Func<BinaryReader, T> read, Action<BinaryWriter, T> write)
+    internal BinaryConverter(string name, Func<BinaryReader, T> read, Action<BinaryWriter, T> write) : base(name)
     {
       SetMethods(read, write);
     }

@@ -7,69 +7,49 @@ using System.Linq;
 
 namespace WrathTools
 {
-  internal class BinaryEnumerableConverter<T, TItem> : BinaryConverter<T>
+  internal sealed class BinaryEnumerableConverter<T, TItem> : BinaryConverter<T> where T: IEnumerable<TItem>
   {
 
-    private enum EnumerableType
-    {
-      Array,
-      Enumerable,
-      Collection
-    }
-
-    private ICreator<IEnumerable<TItem>, T> _create;
-    private int _arrayRank;
-    private EnumerableType _enumerableType;
+    private Creator<IEnumerable<TItem>, T> _creator;
+    private int _arrayRank = 0;
     private BinaryConverter<TItem> _innerConverter;
 
 
-    public BinaryEnumerableConverter()
+    public BinaryEnumerableConverter(string name) : base(name)
     {
       _innerConverter = BinarySerialization.GetConverter<TItem>();
       if(this.Type.IsArray)
       {
-        _enumerableType = EnumerableType.Array;
         _arrayRank = this.Type.GetArrayRank();
       }
       else
       {
-        _enumerableType = this.Type.GetInterfaces().Count(i => i == typeof(ICollection<TItem>)) > 0
-          ? EnumerableType.Collection : EnumerableType.Enumerable;
-        _create = Creators<IEnumerable<TItem>>.GetCreator<T>();
+        _creator = (Creator<IEnumerable<TItem>, T>)typeof(T).GetCreator(typeof(IEnumerable<TItem>));
       }
+      SetMethods(ReadEnumerable, WriteEnumerable);
     }
 
     private T ReadEnumerable(BinaryReader reader)
     {
-      return _enumerableType == EnumerableType.Array
+      return _arrayRank > 0
         ? PopulateArray(reader)
-        : _create.Create(ReadLoop(reader));
+        : _creator.Create(ReadLoop(reader));
     }
 
     private void WriteEnumerable(BinaryWriter writer, T instance)
     {
-      switch(_enumerableType)
+      if(_arrayRank > 0)
       {
-        case EnumerableType.Array:
+        for(int i = 0; i < _arrayRank; i++)
         {
-          for(int i = 0; i < _arrayRank; i++)
-          {
-            writer.Write((instance as Array).GetLength(i));
-          }
-          break;
-        }
-        case EnumerableType.Enumerable:
-        {
-          writer.Write((instance as IEnumerable<TItem>).Count());
-          break;
-        }
-        case EnumerableType.Collection:
-        {
-          writer.Write((instance as  ICollection<TItem>).Count);
-          break;
+          writer.Write((instance as Array).GetLength(i));
         }
       }
-      foreach(TItem item in instance as IEnumerable<TItem>)
+      else
+      {
+        writer.Write(instance.Count());
+      }
+      foreach(TItem item in instance)
       {
         _innerConverter.Write.Invoke(writer, item);
       }
@@ -133,12 +113,23 @@ namespace WrathTools
         {
           Array arr = Array.CreateInstance(typeof(TItem), lengths);
           int[] curr = new int[_arrayRank];
-          for(int d = _arrayRank - 1; d >= 0; d--)
+          int d = _arrayRank - 1;
+          while(d >= 0)
           {
-            for(int i = 0; i < lengths[d]; i++)
+            for(int i = 0; i < lengths[^1]; i++)
             {
               arr.SetValue(_innerConverter.Read.Invoke(reader), curr);
+              curr[^1]++;
+            }
+            while(d >= 0 && curr[d] >= lengths[d])
+            {
+              curr[d] = 0;
+              d--;
+            }
+            if(d >= 0)
+            {
               curr[d]++;
+              d = _arrayRank - 1;
             }
           }
           return (T)(object)arr;

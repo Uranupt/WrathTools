@@ -3,7 +3,7 @@
 
 namespace WrathTools
 {
-  [AttributeUsage(AttributeTargets.Method)]
+  [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
   public sealed class NamedCreatorAttribute : Attribute
   {
 

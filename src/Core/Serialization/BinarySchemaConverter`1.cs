@@ -12,20 +12,19 @@ namespace WrathTools
   {
 
     private readonly Dictionary<string, FieldInfo> _fields = new();
-    private readonly ICreator<T> _create;
+    private readonly Creator<T> _creator;
 
-    internal BinarySchemaConverter(bool incPublic, HashSet<Type> allowedTypes)
+    internal BinarySchemaConverter(string name, SerializationBehavior behavior, HashSet<Type> autoTypes) : base(name)
     {
-      _create = Creators.GetCreator<T>();
-      HashSet<FieldInfo> autoFields = new(this.Type.GetFields(BindingFlags.Instance)
-        .Where(f => f.GetCustomAttribute<SerializeBinaryAttribute>() != null));
-      if(incPublic)
-      {
-        autoFields.UnionWith(this.Type.GetFields(BindingFlags.Instance | BindingFlags.Public));
-      }
+      _creator = (Creator<T>)typeof(T).GetCreator();
+      IEnumerable<FieldInfo> autoFields = this.Type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+        .Where(f => behavior == SerializationBehavior.AllFields
+          || (f.IsPublic && behavior == SerializationBehavior.PublicFields)
+          || f.CustomAttributes.Any(a => a.AttributeType == typeof(SerializeBinaryAttribute))
+        );
       foreach(FieldInfo field in autoFields)
       {
-        if(!BinaryEnumerableSerializer.IsBaseTypeSerializable(field.FieldType, allowedTypes)) { continue; }
+        if(!BinarySerialization.IsBaseTypeSerializable(field.FieldType, autoTypes)) { continue; }
         _fields[field.Name] = field;
       }
       SetMethods(ReadLoop, WriteLoop);
@@ -43,7 +42,7 @@ namespace WrathTools
 
     private T ReadLoop(BinaryReader reader)
     {
-      T instance = _create.Create();
+      T instance = _creator.Create();
       int count = reader.ReadInt32();
       for(int i = 0; i < count; i++)
       {

@@ -10,7 +10,7 @@ namespace WrathTools
     public string Name;
     public Type Target;
 
-    public BinarySerializerAttribute(Type target, string name = null)
+    public BinarySerializerAttribute(Type target, string name)
     {
       Name = name;
       Target = target;
