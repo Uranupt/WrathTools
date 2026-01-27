@@ -12,14 +12,12 @@ namespace WrathTools
     {
       if(Collections.TryGetValue(type, out BinaryConverterCollection collection))
       {
-        return name != null ? collection.TryGetConverter(name, out converter) : collection.TryGetConverter(out converter);
+        if(name != null ? collection.TryGetConverter(name, out converter) : collection.TryGetConverter(out converter))
+        {
+          return true;
+        }
       }
-      if(buildIfEnumerable)
-      {
-        return TryBuildEnumerableConverter(type, out converter);
-      }
-      converter = null;
-      return false;
+      return TryBuildConverter(type, out converter, buildIfEnumerable, name);
     }
 
     public static bool TryGetConverter<T>(out BinaryConverter<T> converter, bool buildIfEnumerable = true, string name = null)

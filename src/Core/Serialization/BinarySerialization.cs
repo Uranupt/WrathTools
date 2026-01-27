@@ -18,8 +18,13 @@ namespace WrathTools
     private static MethodInfo _enumerableBuilder = typeof(BinarySerialization).GetMethod("BuildEnumerableConverter", BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly object _initializeLock = new();
     private static readonly object _enumerableLock = new();
+    private static readonly object _buildLock = new();
 
     private static readonly Dictionary<Type, BinaryConverterCollection> _collections = new();
+    private static readonly Dictionary<Type, BinaryConverterFactory> _factories = new();
+
+    internal static readonly MethodInfo ManualConverterBuilder = typeof(BinarySerialization).GetMethod("BuildManualConverter", BindingFlags.Static | BindingFlags.NonPublic);
+    internal static readonly MethodInfo SchemaConverterBuilder = typeof(BinarySerialization).GetMethod("BuildSchemaConverter", BindingFlags.Static | BindingFlags.NonPublic);
 
     internal readonly static HashSet<Type> SystemSerialzableTypes = new()
     {
@@ -65,6 +70,36 @@ namespace WrathTools
       return IsBaseTypeSerializable(iEnumTypes.First().GenericTypeArguments[0], includedTypes);
     }
 
+    internal static bool TrySelectSerializerMethods(Type declaringType, Type targetedType, out MethodInfo read, out MethodInfo write)
+    {
+      read = null;
+      write = null;
+      foreach(MethodInfo method in declaringType.GetMethods())
+      {
+        if(method.Name == "Read")
+        {
+          ParameterInfo[] parameters = method.GetParameters();
+          if(parameters.Length == 1
+            && parameters[0].ParameterType == typeof(BinaryReader)
+            && method.ReturnType == targetedType)
+          {
+            read = method;
+          }
+        }
+        else if(method.Name == "Write")
+        {
+          ParameterInfo[] parameters = method.GetParameters();
+          if(parameters.Length == 2
+            && parameters[0].ParameterType == typeof(BinaryWriter)
+            && parameters[1].ParameterType == targetedType)
+          {
+            write = method;
+          }
+        }
+      }
+      return read != null && write != null;
+    }
+
     private static void Initialize()
     {
       if(_initialized) { return; }
@@ -84,17 +119,6 @@ namespace WrathTools
           }
         }
 
-        static bool ParamCheck(ParameterInfo[] parameters, params Type[] paramTypes)
-        {
-          if(parameters.Length != paramTypes.Length) { return false; }
-          for(int i = 0; i < parameters.Length; i++)
-          {
-            if(parameters[i].ParameterType != paramTypes[i]) { return false; }
-          }
-          return true;
-        }
-
-
         InitializeSystemTypes();
         Assembly assembly = typeof(BinarySerialization).Assembly;
         AssemblyName assemblyName = assembly.GetName();
@@ -110,14 +134,40 @@ namespace WrathTools
           .SelectMany(t => GetBuildInfos(t))
           .ToArray();
 
-        MethodInfo manualConverterMethod = typeof(BinarySerialization).GetMethod("BuildManualConverter", BindingFlags.Static | BindingFlags.NonPublic);
-        MethodInfo schemaConverterMethod = typeof(BinarySerialization).GetMethod("BuildSchemaConverter", BindingFlags.Static | BindingFlags.NonPublic);
-
         HashSet<Type> autoTypes = new();
+        HashSet<BinarySerializerBuildInfo> factoryInfos = new();
         List<BinarySerializerBuildInfo> autoSerializers = new();
 
         foreach(BinarySerializerBuildInfo info in buildInfos)
         {
+          if(info.TargetedType.IsGenericTypeDefinition)
+          {
+            if(info.DeclaringType != info.TargetedType) { continue; }
+            _factories[info.TargetedType] = new BinaryConverterFactory(info.DeclaringType);
+            _factories[info.TargetedType].AddTemplate(DefaultConverterName, info.DeclaringType);
+            continue;
+          }
+          if(info.TargetedType.ContainsGenericParameters)
+          {
+            if(!info.DeclaringType.IsGenericTypeDefinition 
+              || info.DeclaringType.GenericTypeArguments.Length != info.TargetedType.GenericTypeArguments.Length) 
+            { 
+              continue; 
+            }
+            Type defType = info.TargetedType.GetGenericTypeDefinition();
+            _factories[defType] = new BinaryConverterFactory(defType);
+            _factories[defType].AddTemplate(info.Name, defType);
+            continue;
+          }
+          if(info.DeclaringType.IsGenericType && !info.DeclaringType.IsGenericTypeDefinition)
+          {
+            if(info.TargetedType.IsGenericType && !info.TargetedType.ContainsGenericParameters)
+            {
+              factoryInfos.Add(info);
+            }
+            continue;
+          }
+
           if(info.Behavior != SerializationBehavior.Manual)
           {
             if(info.TargetedType.HasCreator(true))
@@ -134,39 +184,37 @@ namespace WrathTools
             }
             continue;
           }
-          MethodInfo readInfo = null;
-          MethodInfo writeInfo = null;
-          foreach(MethodInfo method in info.DeclaringType.GetMethods(BindingFlags.Static | BindingFlags.Public))
-          {
-            if(method.Name == "Read" && method.ReturnType == info.TargetedType
-              && ParamCheck(method.GetParameters(), typeof(BinaryReader)))
-            {
-              readInfo = method;
-            }
-            if(method.Name == "Write" && ParamCheck(method.GetParameters(), typeof(BinaryWriter), info.TargetedType))
-            {
-              writeInfo = method;
-            }
-          }
-          if(readInfo == null || writeInfo == null)
+
+          if(!TrySelectSerializerMethods(info.DeclaringType, info.TargetedType, out MethodInfo read, out MethodInfo write))
           {
             Diagnostics.LogWarning($"The Type '{info.DeclaringType.Name}' marked with a Binary Serialization Attribute for the Type '{info.TargetedType.Name}' " +
-              $"is missing one or both of the required Read and Write methods. Read Missing: {readInfo == null}, Write Missing: {writeInfo == null} ");
+              $"is missing one or both of the required Read and Write methods. Read Missing: {read == null}, Write Missing: {write == null} ");
             continue;
           }
-          BinaryConverter converter = (BinaryConverter)manualConverterMethod.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, readInfo, writeInfo });
+          BinaryConverter converter = (BinaryConverter)ManualConverterBuilder.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, read, write });
           GetOrBuildCollection(info.TargetedType).AddConverter(converter);
+
+        }
+
+        foreach(BinarySerializerBuildInfo info in factoryInfos)
+        {
+          if(_factories.TryGetValue(info.TargetedType.GetGenericTypeDefinition(), out BinaryConverterFactory factory)
+            && factory.TryBuild(info.TargetedType, out BinaryConverter converter, info.Name, autoTypes))
+          {
+            GetOrBuildCollection(info.TargetedType).AddConverter(converter);
+          }
         }
 
         foreach(BinarySerializerBuildInfo info in autoSerializers)
         {
-          BinaryConverter converter = (BinaryConverter)schemaConverterMethod.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, info.Behavior, autoTypes });
+          BinaryConverter converter = (BinaryConverter)SchemaConverterBuilder.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, info.Behavior, autoTypes });
           GetOrBuildCollection(info.TargetedType).AddConverter(converter);
         }
 
         _initialized = true;
       }
     }
+
 
     private static BinaryConverter BuildManualConverter<T>(string name, MethodInfo readInfo, MethodInfo writeInfo)
     {
@@ -232,6 +280,37 @@ namespace WrathTools
         collection = _collections[type];
       }
       return collection;
+    }
+
+    private static bool TryBuildConverter(Type type, out BinaryConverter converter, bool buildEnumerable, string name)
+    {
+      if(!type.IsGenericType || type.ContainsGenericParameters) 
+      {
+        converter = null;
+        return false; 
+      }
+      lock(_buildLock)
+      {
+        if(_collections.TryGetValue(type, out BinaryConverterCollection collection)
+          && (name != null ? collection.TryGetConverter(name, out converter) : collection.TryGetConverter(out converter)))
+        {
+          return true;
+        }
+        if(_factories.TryGetValue(type.GetGenericTypeDefinition(), out BinaryConverterFactory factory))
+        {
+          if(factory.TryBuild(type, out converter, name))
+          {
+            GetOrBuildCollection(type).AddConverter(converter);
+            return true;
+          }
+        }
+        if(buildEnumerable)
+        {
+          return TryBuildEnumerableConverter(type, out converter);
+        }
+        converter = null;
+        return false;
+      }
     }
 
     private static void InitializeSystemTypes()
