@@ -32,6 +32,28 @@ namespace WrathTools
       _hash = BuildHash(_types);
     }
 
+    public static string GetTypesString(params Type[] types)
+    {
+      if(types.Length == 0) { return "None"; }
+      string resl = types[0].Name;
+      for(int i = 1; i < types.Length; i++)
+      {
+        resl += $", {types[i].Name}";
+      }
+      return resl;
+    }
+
+    public static string GetTypesString(params object[] values)
+    {
+      if(values.Length == 0) { return "None"; }
+      string resl = values[0].GetType().Name;
+      for(int i = 1; i < values.Length; i++)
+      {
+        resl += $", {values[i].GetType().Name}";
+      }
+      return resl;
+    }
+
     private static int BuildHash(Type[] types)
     {
       int resl = EmptyHash + types.Length;

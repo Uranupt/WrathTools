@@ -1,6 +1,6 @@
 ﻿
 
-namespace WrathTools
+namespace WrathTools.Deprecated
 {
   public interface ICreatorWithoutArgs : ICreator
   {

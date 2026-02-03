@@ -9,16 +9,12 @@ namespace WrathTools
     : CreatorBase,
       ICreator<TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(Array.Empty<Type>());
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create();
-
-    object ICreatorWithoutArgs
-      .Create() 
-      => Create();
 
     TResult ICreatorFor<TResult>.Create(params object[] args) 
       => Create();
@@ -37,17 +33,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T arg);
-
-    object ICreatorWithArgs<T>
-      .Create(T arg) 
-      => Create(arg);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -80,17 +72,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2);
-
-    object ICreatorWithArgs<T1, T2>
-      .Create(T1 arg1, T2 arg2)
-      => Create(arg1, arg2);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -123,17 +111,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3);
-
-    object ICreatorWithArgs<T1, T2, T3>
-      .Create(T1 arg1, T2 arg2, T3 arg3)
-      => Create(arg1, arg2, arg3);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -166,17 +150,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-
-    object ICreatorWithArgs<T1, T2, T3, T4>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-      => Create(arg1, arg2, arg3, arg4);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -209,7 +189,7 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) });
 
     public sealed override Type CreatedType => typeof(TResult);
@@ -217,9 +197,6 @@ namespace WrathTools
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
 
-    object ICreatorWithArgs<T1, T2, T3, T4, T5>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-      => Create(arg1, arg2, arg3, arg4, arg5);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -252,17 +229,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -295,17 +268,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7>.Create(
-      T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -338,17 +307,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -381,17 +346,15 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
+    public static ArgsSignature TempDebugSig => new();
+    public static string TempDebugString = "N9 static debug string";
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -424,7 +387,7 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10) });
 
     public sealed override Type CreatedType => typeof(TResult);
@@ -432,9 +395,6 @@ namespace WrathTools
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10);
 
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -467,17 +427,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -510,17 +466,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -553,17 +505,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -596,17 +544,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {
@@ -639,17 +583,13 @@ namespace WrathTools
     : CreatorBase,
       ICreator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>
   {
-    private readonly ArgsSignature _signature =
+    private static readonly ArgsSignature _signature =
       new(new Type[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14), typeof(T15) });
 
     public sealed override Type CreatedType => typeof(TResult);
     public sealed override ArgsSignature Signature => _signature;
 
     public abstract TResult Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15);
-
-    object ICreatorWithArgs<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
-      .Create(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
-      => Create(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15);
 
     TResult ICreatorFor<TResult>.Create(params object[] args)
     {

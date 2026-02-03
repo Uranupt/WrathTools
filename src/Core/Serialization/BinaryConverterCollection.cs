@@ -37,6 +37,7 @@ namespace WrathTools
       {
         Diagnostics.LogError(
           new KeyNotFoundException($"No BinaryConverter found for Type '{this.Type.Name}' with name '{name}'"),
+          id: $"{Serialization.DiagnosticID}.missing_converter.binary",
           stackTrace: new(true)
         );
       }
@@ -49,6 +50,7 @@ namespace WrathTools
       {
         Diagnostics.LogError(
           new Exception($"No default BinaryConverter for Type '{this.Type.Name}' and multiple named converters, cannot resolve ambiguity. Add a default or specify a name."),
+          id: $"{Serialization.DiagnosticID}.ambiguous_default_converter.binary",
           stackTrace: new(true)
         );
       }

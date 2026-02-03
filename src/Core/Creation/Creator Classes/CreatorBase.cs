@@ -39,7 +39,7 @@ namespace WrathTools
 
     public bool TryCreateAs<T>(out T value, params object[] args)
     {
-      if(typeof(T).IsAssignableFrom(CreatedType) && TryCreateAs(out object resl, args))
+      if(typeof(T).IsAssignableFrom(CreatedType) && TryCreate(out object resl, args))
       {
         value = (T)resl;
         return true;

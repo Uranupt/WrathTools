@@ -11,8 +11,15 @@ namespace WrathTools
   public static class Diagnostics
   {
 
+    internal const string GeneralID = "wrath.general";
+
+    //TODO: Thread Safety
     private static bool _initialized = false;
     private static List<HandlerDescriptor> _handlers = new();
+
+    //TODO: Timestamps
+    public static bool TimeStamps = false;
+    public static bool WriteIDs = false;
 
     public static NativeDiagnosticContext NewMessage(string message, string id = null, StackTrace stackTrace = null,
           DiagnosticSourceInfo sourceInfo = null)
@@ -53,7 +60,10 @@ namespace WrathTools
       }
       else
       {
-        System.Diagnostics.Debug.Write(context.Message);
+        string msg = WriteIDs
+          ? $"[{context.ID}]: {context.Message}"
+          : context.Message;
+        Console.WriteLine(msg);
       }
     }
 

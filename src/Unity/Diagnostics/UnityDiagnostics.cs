@@ -1,7 +1,8 @@
-﻿
-
-using System;
+﻿using System;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
 
 namespace WrathTools.Unity
 {
@@ -9,6 +10,17 @@ namespace WrathTools.Unity
   {
 
     public static UnityDiagnosticOptions Options = UnityDiagnosticOptions.Default;
+
+    /// <summary> 
+    /// The <see cref="Regex"/> patterns by which to compare the IDs of input <see cref="DiagnosticContext"/>s. Any IDs which match one of these 
+    /// patterns will be automatically ignored. Use this if you want to ensure specific <see cref="DiagnosticContext"/>s throw errors.
+    /// </summary>
+    /// <remarks> Some native WrathTools ID patterns are automatically included. </remarks>
+    public readonly static HashSet<Regex> DoNotHandlePatterns = new()
+    {
+      new Regex(@"^wrath\.serialization\.schema_misaligned.*"),
+      new Regex(@"^wrath\.serialization\.missing_schema_field.*")
+    };
 
     public static UnityDiagnosticContext NewMessage(string message, string id = null, StackTrace stackTrace = null,
       DiagnosticSourceInfo sourceInfo = null)
@@ -46,7 +58,7 @@ namespace WrathTools.Unity
       Diagnostics.Log(UnityDiagnosticContext.NewError(exception, message, id, stackTrace, sourceInfo));
     }
 
-    public static IScope OptionsScope(UnityDiagnosticOptions options)
+    public static ValueScope<UnityDiagnosticOptions> OptionsScope(UnityDiagnosticOptions options)
     {
       return new ValueScope<UnityDiagnosticOptions>(v => Options = v, Options, options);
     }

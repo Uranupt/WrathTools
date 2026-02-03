@@ -53,6 +53,18 @@ namespace WrathTools
       }
     }
 
+    public static bool TryGetConverterNoInitialize(Type type, out BinaryConverter converter, bool buildIfEnumerable = true, string name = null)
+    {
+      if(_collections.TryGetValue(type, out BinaryConverterCollection collection))
+      {
+        if(name != null ? collection.TryGetConverter(name, out converter) : collection.TryGetConverter(out converter))
+        {
+          return true;
+        }
+      }
+      return TryBuildConverter(type, out converter, buildIfEnumerable, name);
+    }
+
     internal static bool IsBaseTypeSerializable(Type type, IEnumerable<Type> includedTypes = null)
     {
       if(type.IsArray)
@@ -178,8 +190,9 @@ namespace WrathTools
             else
             {
               Diagnostics.LogWarning(
-                $"The Type '{info.TargetedType}' marked with the BinarySerializable Attribute does not have any available parameterless" +
-                $" constructors or parameterless Creators. Unable to build a serialization schema."
+                $"The Type '{info.TargetedType}' marked for the Binary Serialization does not have any available parameterless" +
+                $" constructors or parameterless Creators. Unable to build a serialization schema.",
+                id: $"{Serialization.DiagnosticID}.initialize_missing_creator.binary"
               );
             }
             continue;

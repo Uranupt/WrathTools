@@ -3,6 +3,7 @@
     <File Path="Directory.Build.props" />
   </Folder>
   <Project Path="Core/WrathTools.csproj" />
+  <Project Path="UnitTests/WrathTools.UnitTests.csproj" Id="048e51da-7565-4b41-b8c7-887cc9f68b79" />
   <Project Path="Unity/WrathTools.Unity.csproj" Id="4b707886-5b9b-46f9-a534-86cd2946bd20" />
   <Project Path="UnityEditor/WrathTools.UnityEditor.csproj" />
 </Solution>

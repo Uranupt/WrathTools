@@ -1,11 +1,17 @@
 ﻿using System;
 using System.Reflection;
+using System.Linq.Expressions;
 
 
 namespace WrathTools
 {
   public static class DelegateBuilder
   {
+
+    public static TDelegate CompileLambda<TDelegate>(Expression body, ParameterExpression[] parameters, bool noJIT) where TDelegate : Delegate
+    {
+      return (TDelegate)Expression.Lambda(body, parameters).Compile(noJIT);
+    }
 
     //1
     public static Func<TResult> 

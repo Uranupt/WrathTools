@@ -10,6 +10,8 @@ namespace WrathTools
   public static class Serialization
   {
 
+    internal const string DiagnosticID = "wrath.serialization";
+
     public static Encoding DefaultEncoding = Encoding.UTF8;
 
     public static void WriteToStream(IWriteContents source, Stream stream, Encoding encoding = null, int bufferSize = 1024)

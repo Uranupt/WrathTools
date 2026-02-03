@@ -38,6 +38,7 @@ namespace WrathTools
       return true;
     }
 
+    //TODO: Why isn't this just building everything at once? Let's try and change it to do that
     public bool TryBuild(Type closedType, out BinaryConverter converter, string name = null, HashSet<Type> autoTypes = null)
     {
       Template template;
@@ -52,8 +53,9 @@ namespace WrathTools
       if(template == null)
       {
         Diagnostics.LogWarning(
-          $"No BinarySerializer with name '{name ?? BinarySerialization.DefaultConverterName}' or ambiguous default " +
-          $"for open generic Type '{OpenType.Name}'"
+          $"No BinarySerializer with name '{name ?? "(none)"}' or ambiguous default " +
+          $"for open generic Type '{OpenType.Name}'",
+          id: $"{Serialization.DiagnosticID}.factory_missing_name.binary"
         );
         converter = null;
         return false;
@@ -74,7 +76,8 @@ namespace WrathTools
           {
             Diagnostics.LogWarning(
               $"The Type '{closedType}' marked with the BinarySerializable Attribute does not have any available parameterless" +
-              $" constructors or parameterless Creators. Unable to build a serialization schema."
+              $" constructors or parameterless Creators. Unable to build a serialization schema.",
+              id: $"{Serialization.DiagnosticID}.factory_missing_creator.binary"
             );
             converter = null;
             return false;
@@ -89,7 +92,8 @@ namespace WrathTools
       {
         Diagnostics.LogWarning(
           $"The Type '{closedDeclaringType.Name}' is missing the required Read and Write methods to satisfy BinarySerialization for" +
-          $" the Type '{closedType.Name}'. Read: {read != null}, Write: {write != null}"
+          $" the Type '{closedType.Name}'. Read: {read != null}, Write: {write != null}",
+          id: $"{Serialization.DiagnosticID}.factory_missing_methods.binary"
         );
         converter = null;
         return false;
