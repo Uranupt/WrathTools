@@ -24,9 +24,7 @@ namespace WrathTools
       DeclaringType = type;
       TargetedType = attribute.Target;
       Behavior = SerializationBehavior.Manual;
-      Name = attribute.Name != BinarySerialization.DefaultConverterName
-        ? attribute.Name
-        : $"invalidSerializerName_{type.Namespace}.{type.Name}";
+      Name = attribute.Name;
     }
 
   }

@@ -62,7 +62,8 @@ namespace WrathTools.UnityEditor.ResourceManagement
       {
         UnityDiagnostics.LogWarning(
           "ResourceDatabase's 'Auto Update' feature is turned off. You must manually update with the menu command WrathTools/Database/Refresh Database."
-          + " You can disable this warning by unchecking 'Warn When Update Is Off' in the Database settings."
+          + " You can disable this warning by unchecking 'Warn When Update Is Off' in the Database settings.",
+          id: $"warning.{ResourceDatabase.DiagnosticID}.auto_update_off"
         );
       }
     }

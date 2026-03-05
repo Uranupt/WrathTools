@@ -3,7 +3,7 @@ using System;
 
 namespace WrathTools.Unity.ResourceManagement
 {
-  public abstract class ResourceObject<T> : ResourceObject, IBuilder<T> where T : class
+  public abstract class ResourceObject<T> : ResourceObject where T : class
   {
 
     public sealed override Type BuildType => typeof(T);
@@ -12,7 +12,8 @@ namespace WrathTools.Unity.ResourceManagement
 
     public override sealed bool TryBuild<TResl>(out TResl resl, bool exactType = true) where TResl : class
     {
-      if(typeof(TResl).TypeMatch(BuildType, exactType))
+
+      if(exactType ? typeof(TResl) == BuildType : typeof(TResl).IsAssignableFrom(BuildType))
       {
         resl = Build() as TResl;
         return true;
@@ -27,7 +28,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new InvalidCastException($"Cannot cast from Type {BuildType.Name} to Type {typeof(TResl).Name}"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".incorrect_resource_build_type"
         );
       }
       return resl;

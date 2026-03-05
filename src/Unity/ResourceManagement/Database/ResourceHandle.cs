@@ -22,7 +22,8 @@ namespace WrathTools.Unity.ResourceManagement
         {
           UnityDiagnostics.LogError(
              new InvalidOperationException("ResourceHandles should not be used while invalid or after being released"),
-             stackTrace: new(true)
+             stackTrace: new(true),
+             id: ResourceDatabase.DiagnosticID + ".handle_invalid"
           );
           return null;
         }
@@ -30,7 +31,8 @@ namespace WrathTools.Unity.ResourceManagement
         {
           UnityDiagnostics.LogError(
             new Exception($"Failed to find resource with ID: {ID} and Type: {ResourceType}"),
-            stackTrace: new(true)
+            stackTrace: new(true),
+            id: ResourceDatabase.DiagnosticID + ".handle_missing_resource"
           );
         }
         return resl;
@@ -90,7 +92,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new InvalidOperationException($"Cannot duplicate an invalid ResourceHandle. Valid On Creation: {_validOnCreated}, Released: {Released}"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".handle_duplicate_invalid"
         );
       }
       return new ResourceHandle(ID);

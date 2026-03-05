@@ -10,6 +10,7 @@ namespace WrathTools.Unity
 
     public static Func<Type, SettingsObject> GetSettings { get; set; } = t => Resources.Load<SettingsObject>($"{SettingsPath}/{t.Name}");
     public static string SettingsPath => "SettingsObjects";
+    public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".settings";
 
     public abstract string DisplayName { get; }
     public abstract string CategoryName { get; }
@@ -24,7 +25,8 @@ namespace WrathTools.Unity
         {
           UnityDiagnostics.LogError(
             new Exception($"Setttings object of Type '{typeof(T).Name}' was not found."),
-            stackTrace: new(true)
+            stackTrace: new(true),
+            id: DiagnosticID + ".missing_type"
           );
         }
       }

@@ -7,16 +7,11 @@ namespace WrathTools.Unity
   public sealed class TargetItemJob<T> : FrameScheduler.IJob where T : IEquatable<T>
   {
 
-    //TODO: Handle or scrap Behaviors
-
     private readonly OverflowOption _overflow;
-    //private readonly ItemBehaviors _behaviors;
     private readonly IEnumerable<T> _enumerable;
     private readonly Func<T, bool> _onWork;
     private readonly Action _onDone;
     private readonly int _steps;
-
-    //private T _lastItem;
 
     public TargetItemJob(
       IEnumerable<T> enumerable,
@@ -31,11 +26,7 @@ namespace WrathTools.Unity
       _onDone = onDone;
       _steps = Math.Max(steps, 0);
       _overflow = overflow;
-      //_behaviors = behaviors;
     }
-
-    //private bool NullCheck(T value) => !value.Equals(null) || _behaviors.HasFlag(ItemBehaviors.AllowNull);
-    //private bool DuplicateCheck(T value) => !value.Equals(_lastItem) || !_behaviors.HasFlag(ItemBehaviors.SkipDuplicates);
 
     public bool DoWork()
     {

@@ -10,6 +10,7 @@ namespace WrathTools.Unity
   {
 
     public static UnityDiagnosticOptions Options = UnityDiagnosticOptions.Default;
+    public static string DiagnosticID = "wrath.unity";
 
     /// <summary> 
     /// The <see cref="Regex"/> patterns by which to compare the IDs of input <see cref="DiagnosticContext"/>s. Any IDs which match one of these 
@@ -19,7 +20,9 @@ namespace WrathTools.Unity
     public readonly static HashSet<Regex> DoNotHandlePatterns = new()
     {
       new Regex(@"^wrath\.serialization\.schema_misaligned.*"),
-      new Regex(@"^wrath\.serialization\.missing_schema_field.*")
+      new Regex(@"^wrath\.serialization\.missing_schema_field.*"),
+      new Regex(@"^wrath\.serialization\.read_instance_out_of_order.*"),
+      new Regex(@"^wrath\.serialization\.read_cyclical_reference_not_added.*")
     };
 
     public static UnityDiagnosticContext NewMessage(string message, string id = null, StackTrace stackTrace = null,
@@ -61,6 +64,18 @@ namespace WrathTools.Unity
     public static ValueScope<UnityDiagnosticOptions> OptionsScope(UnityDiagnosticOptions options)
     {
       return new ValueScope<UnityDiagnosticOptions>(v => Options = v, Options, options);
+    }
+
+    internal static bool IsIdIgnored(string id)
+    {
+      foreach(Regex pattern in DoNotHandlePatterns)
+      {
+        if(pattern.IsMatch(id))
+        {
+          return true;
+        }
+      }
+      return false;
     }
 
   }

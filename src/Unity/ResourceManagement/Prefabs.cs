@@ -7,6 +7,8 @@ namespace WrathTools.Unity.ResourceManagement
   public class Prefabs : SettingsObject<Prefabs>
   {
 
+		public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".prefabs";
+
     public override string DisplayName => "Prefabs";
     public override string CategoryName => "Resource Management";
     public override bool ShowInMenu => true;
@@ -62,7 +64,11 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGet(name, out GameObject obj))
 			{
-        UnityDiagnostics.LogError(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
+        UnityDiagnostics.LogError(
+					new Exception($"No Prefab found with name '{name}'"), 
+					stackTrace: new(true),
+					id: DiagnosticID + ".missing_prefab.direct"
+				);
 			}
       return obj;
     }
@@ -71,7 +77,11 @@ namespace WrathTools.Unity.ResourceManagement
 		{
 			if(!TryGetTemp(name, out TempGameObject obj))
 			{
-        UnityDiagnostics.LogError(new Exception($"No Prefab found with name '{name}'"), stackTrace: new(true));
+        UnityDiagnostics.LogError(
+					new Exception($"No Prefab found with name '{name}'"), 
+					stackTrace: new(true),
+					id: DiagnosticID + ".missing_prefab.temp"
+				);
       }
       return obj;
     }
@@ -82,7 +92,8 @@ namespace WrathTools.Unity.ResourceManagement
 			{
 				UnityDiagnostics.LogError(
 					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
-					stackTrace: new(true)
+					stackTrace: new(true),
+					id: DiagnosticID + ".missing_component.direct"
 				);
 			}
       return comp;
@@ -95,7 +106,8 @@ namespace WrathTools.Unity.ResourceManagement
 			{
 				UnityDiagnostics.LogError(
 					new Exception($"No Prefab found with name '{name}' and a Component of Type '{typeof(T).Name}'"),
-					stackTrace: new(true)
+					stackTrace: new(true),
+					id: DiagnosticID + ".missing_component.temp"
 				);
 			}
       return comp;

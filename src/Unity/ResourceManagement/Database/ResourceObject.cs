@@ -4,7 +4,7 @@ using System;
 
 namespace WrathTools.Unity.ResourceManagement
 {
-  public abstract class ResourceObject : ScriptableObject, IBuilder
+  public abstract class ResourceObject : ScriptableObject
   {
 
     public static event Action<ResourceObject> ResourceIDChanged;

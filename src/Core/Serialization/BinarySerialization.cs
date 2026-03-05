@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 
 
@@ -12,7 +9,7 @@ namespace WrathTools
   public static partial class BinarySerialization
   {
 
-    internal const string DefaultConverterName = "default";
+    public const string DefaultConverterName = "default";
 
     private static bool _initialized;
     private static MethodInfo _enumerableBuilder = typeof(BinarySerialization).GetMethod("BuildEnumerableConverter", BindingFlags.Static | BindingFlags.NonPublic);
@@ -92,7 +89,7 @@ namespace WrathTools
         {
           ParameterInfo[] parameters = method.GetParameters();
           if(parameters.Length == 1
-            && parameters[0].ParameterType == typeof(BinaryReader)
+            && parameters[0].ParameterType == typeof(BinaryReadContext)
             && method.ReturnType == targetedType)
           {
             read = method;
@@ -102,7 +99,7 @@ namespace WrathTools
         {
           ParameterInfo[] parameters = method.GetParameters();
           if(parameters.Length == 2
-            && parameters[0].ParameterType == typeof(BinaryWriter)
+            && parameters[0].ParameterType == typeof(BinaryWriteContext)
             && parameters[1].ParameterType == targetedType)
           {
             write = method;
@@ -192,7 +189,7 @@ namespace WrathTools
               Diagnostics.LogWarning(
                 $"The Type '{info.TargetedType}' marked for the Binary Serialization does not have any available parameterless" +
                 $" constructors or parameterless Creators. Unable to build a serialization schema.",
-                id: $"{Serialization.DiagnosticID}.initialize_missing_creator.binary"
+                id: $"warning.{Serialization.DiagnosticID}.initialize_missing_creator.binary"
               );
             }
             continue;
@@ -233,8 +230,8 @@ namespace WrathTools
     {
       return new BinaryConverter<T>(
         name,
-        DelegateBuilder.Func<BinaryReader, T>(readInfo),
-        DelegateBuilder.Action<BinaryWriter, T>(writeInfo)
+        DelegateBuilder.Func<BinaryReadContext, T>(readInfo),
+        DelegateBuilder.Action<BinaryWriteContext, T>(writeInfo)
       );
     }
 
@@ -329,33 +326,33 @@ namespace WrathTools
     private static void InitializeSystemTypes()
     {
       _collections[typeof(bool)] = new(typeof(bool));
-      _collections[typeof(bool)].AddConverter(new BinaryConverter<bool>(DefaultConverterName, r => r.ReadBoolean(), (w, v) => w.Write(v)));
+      _collections[typeof(bool)].AddConverter(new BinaryConverter<bool>(DefaultConverterName, r => r.Reader.ReadBoolean(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(byte)] = new(typeof(byte));
-      _collections[typeof(byte)].AddConverter(new BinaryConverter<byte>(DefaultConverterName, r => r.ReadByte(), (w, v) => w.Write(v)));
+      _collections[typeof(byte)].AddConverter(new BinaryConverter<byte>(DefaultConverterName, r => r.Reader.ReadByte(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(sbyte)] = new(typeof(sbyte));
-      _collections[typeof(sbyte)].AddConverter(new BinaryConverter<sbyte>(DefaultConverterName, r => r.ReadSByte(), (w, v) => w.Write(v)));
+      _collections[typeof(sbyte)].AddConverter(new BinaryConverter<sbyte>(DefaultConverterName, r => r.Reader.ReadSByte(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(short)] = new(typeof(short));
-      _collections[typeof(short)].AddConverter(new BinaryConverter<short>(DefaultConverterName, r => r.ReadInt16(), (w, v) => w.Write(v)));
+      _collections[typeof(short)].AddConverter(new BinaryConverter<short>(DefaultConverterName, r => r.Reader.ReadInt16(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(ushort)] = new(typeof(ushort));
-      _collections[typeof(ushort)].AddConverter(new BinaryConverter<ushort>(DefaultConverterName, r => r.ReadUInt16(), (w, v) => w.Write(v)));
+      _collections[typeof(ushort)].AddConverter(new BinaryConverter<ushort>(DefaultConverterName, r => r.Reader.ReadUInt16(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(int)] = new(typeof(int));
-      _collections[typeof(int)].AddConverter(new BinaryConverter<int>(DefaultConverterName, r => r.ReadInt32(), (w, v) => w.Write(v)));
+      _collections[typeof(int)].AddConverter(new BinaryConverter<int>(DefaultConverterName, r => r.Reader.ReadInt32(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(uint)] = new(typeof(uint));
-      _collections[typeof(uint)].AddConverter(new BinaryConverter<uint>(DefaultConverterName, r => r.ReadUInt32(), (w, v) => w.Write(v)));
+      _collections[typeof(uint)].AddConverter(new BinaryConverter<uint>(DefaultConverterName, r => r.Reader.ReadUInt32(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(long)] = new(typeof(long));
-      _collections[typeof(long)].AddConverter(new BinaryConverter<long>(DefaultConverterName, r => r.ReadInt64(), (w, v) => w.Write(v)));
+      _collections[typeof(long)].AddConverter(new BinaryConverter<long>(DefaultConverterName, r => r.Reader.ReadInt64(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(ulong)] = new(typeof(ulong));
-      _collections[typeof(ulong)].AddConverter(new BinaryConverter<ulong>(DefaultConverterName, r => r.ReadUInt64(), (w, v) => w.Write(v)));
+      _collections[typeof(ulong)].AddConverter(new BinaryConverter<ulong>(DefaultConverterName, r => r.Reader.ReadUInt64(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(float)] = new(typeof(float));
-      _collections[typeof(float)].AddConverter(new BinaryConverter<float>(DefaultConverterName, r => r.ReadSingle(), (w, v) => w.Write(v)));
+      _collections[typeof(float)].AddConverter(new BinaryConverter<float>(DefaultConverterName, r => r.Reader.ReadSingle(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(double)] = new(typeof(double));
-      _collections[typeof(double)].AddConverter(new BinaryConverter<double>(DefaultConverterName, r => r.ReadDouble(), (w, v) => w.Write(v)));
+      _collections[typeof(double)].AddConverter(new BinaryConverter<double>(DefaultConverterName, r => r.Reader.ReadDouble(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(decimal)] = new(typeof(decimal));
-      _collections[typeof(decimal)].AddConverter(new BinaryConverter<decimal>(DefaultConverterName, r => r.ReadDecimal(), (w, v) => w.Write(v)));
+      _collections[typeof(decimal)].AddConverter(new BinaryConverter<decimal>(DefaultConverterName, r => r.Reader.ReadDecimal(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(char)] = new(typeof(char));
-      _collections[typeof(char)].AddConverter(new BinaryConverter<char>(DefaultConverterName, r => r.ReadChar(), (w, v) => w.Write(v)));
+      _collections[typeof(char)].AddConverter(new BinaryConverter<char>(DefaultConverterName, r => r.Reader.ReadChar(), (w, v) => w.Writer.Write(v)));
       _collections[typeof(string)] = new(typeof(string));
-      _collections[typeof(string)].AddConverter(new BinaryConverter<string>(DefaultConverterName, r => r.ReadString(), (w, v) => w.Write(v)));
+      _collections[typeof(string)].AddConverter(new BinaryConverter<string>(DefaultConverterName, r => r.Reader.ReadString(), (w, v) => w.Writer.Write(v)));
     }
 
   }

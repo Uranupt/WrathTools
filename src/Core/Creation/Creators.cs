@@ -23,15 +23,6 @@ namespace WrathTools
     private readonly static Dictionary<Type, CreatorCollectionBase> _collections = new();
     private readonly static Dictionary<Type, CreatorFactory> _factories = new();
 
-    private static Dictionary<Type, CreatorCollectionBase> Collections
-    {
-      get
-      {
-        Initialize();
-        return _collections;
-      }
-    }
-
     public static bool HasCreator(this Type type, string name, bool exactArgLength, bool exactArgTypes, bool discoverConstructors, params Type[] argTypes)
       => TryGetCreator(type, out _, name, exactArgLength, exactArgTypes, discoverConstructors, argTypes);
 
@@ -58,9 +49,10 @@ namespace WrathTools
 
     public static bool TryGetCollection(Type type, out ICreatorCollection collection, bool discoverConstructors)
     {
+      Initialize();
       bool resl = discoverConstructors
         ? TryDiscoverConstructors(type, out CreatorCollectionBase coll)
-        : Collections.TryGetValue(type, out coll);
+        : _collections.TryGetValue(type, out coll);
       collection = coll;
       return resl;
     }
@@ -148,12 +140,10 @@ namespace WrathTools
 
     private static void Initialize()
     {
-      Diagnostics.LogMessage("Attempting to Initialize");
       if(_initialized) { return; }
       lock(_initializeLock)
       {
         if(_initialized) { return; }
-        Diagnostics.LogMessage("Running initialize");
         bool AttributeCheck(MethodInfo m)
         {
           if(m.ReturnType.GetGenericArguments().Length > 0
@@ -252,7 +242,6 @@ namespace WrathTools
           }
         }
 
-        Diagnostics.LogMessage("Finished initialize");
         _initialized = true;
       }
     }
@@ -261,13 +250,13 @@ namespace WrathTools
     {
       if(_discoveredConstructors.Contains(type))
       {
-        return Collections.TryGetValue(type, out collection);
+        return _collections.TryGetValue(type, out collection);
       }
       _discoveredConstructors.Add(type);
       ConstructorInfo[] constructors = type.GetConstructors();
       if(constructors.Length == 0)
       {
-        return Collections.TryGetValue(type, out collection);
+        return _collections.TryGetValue(type, out collection);
       }
       collection = GetOrCreateCollection(type);
       foreach(ConstructorInfo constructor in constructors)

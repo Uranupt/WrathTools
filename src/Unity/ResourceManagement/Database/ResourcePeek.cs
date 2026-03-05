@@ -23,7 +23,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new KeyNotFoundException($"No field matching the name or alias {name} was found."),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".missing_peek_field"
         );
       }
       return item;

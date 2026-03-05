@@ -22,17 +22,17 @@ namespace WrathTools.UnitTests
       PublicUnmarked = setValue;
     }
 
-    public static void Write(BinaryWriter writer, ManualSelfSerializer instance)
+    public static void Write(BinaryWriteContext context, ManualSelfSerializer instance)
     {
-      writer.Write(instance._privateUnmarked);
-      writer.Write(instance.PublicUnmarked);
+      context.WriteAs<string>(instance._privateUnmarked);
+      context.WriteAs<string>(instance.PublicUnmarked);
     }
 
-    public static ManualSelfSerializer Read(BinaryReader reader)
+    public static ManualSelfSerializer Read(BinaryReadContext context)
     {
       ManualSelfSerializer instance = new();
-      instance._privateUnmarked = reader.ReadString();
-      instance.PublicUnmarked = reader.ReadString();
+      instance._privateUnmarked = context.ReadAs<string>();
+      instance.PublicUnmarked = context.ReadAs<string>();
       return instance;
     }
 

@@ -122,7 +122,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceCollection with name '{name}' found in ResourceLibrary '{Name}'"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + "missing_name.collection"
         );
       }
       return resl;
@@ -134,7 +135,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceCollection for ID '{id.ToIDString(true)}' found in ResourceLibrary '{Name}'"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + "missing_id.collection"
         );
       }
       return resl;
@@ -188,7 +190,11 @@ namespace WrathTools.Unity.ResourceManagement
       }
       else
       {
-        UnityDiagnostics.LogError(new InvalidOperationException(GetIndexOverflowMessage(name)), stackTrace: new(true));
+        UnityDiagnostics.LogError(
+          new InvalidOperationException(GetIndexOverflowMessage(name)), 
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".max_collections"
+         );
       }
     }
 

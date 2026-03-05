@@ -7,7 +7,7 @@ namespace WrathTools
   public sealed class SerializeBinaryAttribute : Attribute
   {
 
-     public readonly string SerializerName;
+    public readonly string SerializerName;
 
     public SerializeBinaryAttribute(string serializerName = null)
     {

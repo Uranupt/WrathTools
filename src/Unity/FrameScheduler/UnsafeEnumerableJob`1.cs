@@ -46,14 +46,7 @@ namespace WrathTools.Unity
         }
         else
         {
-          try
-          {
-            _onWork?.Invoke(_enumerator.Current);
-          }
-          catch
-          {
-
-          }
+          _onWork?.Invoke(_enumerator.Current);
           return true;
         } 
       }

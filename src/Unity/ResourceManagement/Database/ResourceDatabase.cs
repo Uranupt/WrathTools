@@ -14,6 +14,7 @@ namespace WrathTools.Unity.ResourceManagement
     public static string AssetPath => "Assets/Resources/" + Instance._folder; 
     public static string ResourcePath => Instance._folder;
     public static string DumpPath => "Assets/ResourceDump";
+    public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".resource_database";
 
     public static event Action<ResourceLibrary> LibraryRemoved;
     public static event Action AutoUpdateTurnedOn;
@@ -169,7 +170,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceLibrary for the ResourceObject Type '{typeName}' was found in the ResourceDatabase."),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: DiagnosticID + ".missing_resource_type"
         );
       }
       return resl;
@@ -181,7 +183,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceLibrary for the ID '{id.ToIDString(true)}' was found in the ResourceDatabase"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: DiagnosticID + ".missing_id.library"
         );
       }
       return resl;
@@ -290,7 +293,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogWarning(
           $"Cannot create a new ResourceLibrary for ResourceObject Type '{resourceType.Name}', " +
-            $"the Database already has {ResourceID.MaxLibraries} indicies. You will need to Rebuild the Database."
+            $"the Database already has {ResourceID.MaxLibraries} indicies. You will need to Rebuild the Database.",
+          id: $"warning.{DiagnosticID}.max_libraries"
         );
         return;
       }

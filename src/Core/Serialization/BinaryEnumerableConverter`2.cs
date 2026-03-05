@@ -14,6 +14,8 @@ namespace WrathTools
     private int _arrayRank = 0;
     private BinaryConverter<TItem> _innerConverter;
 
+    public override bool IsReferenceType => false;
+
 
     public BinaryEnumerableConverter(string name) : base(name)
     {
@@ -29,47 +31,47 @@ namespace WrathTools
       SetMethods(ReadEnumerable, WriteEnumerable);
     }
 
-    private T ReadEnumerable(BinaryReader reader)
+    private T ReadEnumerable(BinaryReadContext context)
     {
       return _arrayRank > 0
-        ? PopulateArray(reader)
-        : _creator.Create(ReadLoop(reader));
+        ? PopulateArray(context)
+        : _creator.Create(ReadLoop(context));
     }
 
-    private void WriteEnumerable(BinaryWriter writer, T instance)
+    private void WriteEnumerable(BinaryWriteContext context, T instance)
     {
       if(_arrayRank > 0)
       {
         for(int i = 0; i < _arrayRank; i++)
         {
-          writer.Write((instance as Array).GetLength(i));
+          context.Writer.Write((instance as Array).GetLength(i));
         }
       }
       else
       {
-        writer.Write(instance.Count());
+        context.Writer.Write(instance.Count());
       }
       foreach(TItem item in instance)
       {
-        _innerConverter.Write.Invoke(writer, item);
+        _innerConverter.Write(context, item);
       }
     }
 
-    private IEnumerable<TItem> ReadLoop(BinaryReader reader)
+    private IEnumerable<TItem> ReadLoop(BinaryReadContext context)
     {
-      int count = reader.ReadInt32();
+      int count = context.Reader.ReadInt32();
       for(int i = 0; i < count; i++)
       {
-        yield return _innerConverter.Read.Invoke(reader);
+        yield return _innerConverter.Read(context);
       }
     }
 
-    private T PopulateArray(BinaryReader reader)
+    private T PopulateArray(BinaryReadContext context)
     {
       int[] lengths = new int[_arrayRank];
       for(int i = 0; i < _arrayRank; i++)
       {
-        lengths[i] = reader.ReadInt32();
+        lengths[i] = context.Reader.ReadInt32();
       }
       switch(_arrayRank)
       {
@@ -78,7 +80,7 @@ namespace WrathTools
           TItem[] arr = new TItem[lengths[0]];
           for(int i = 0; i < arr.Length; i++)
           {
-            arr[i] = _innerConverter.Read.Invoke(reader);
+            arr[i] = _innerConverter.Read(context);
           }
           return (T)(object)arr;
         }
@@ -89,7 +91,7 @@ namespace WrathTools
           {
             for(int i2 = 0; i2 < lengths[1]; i2++)
             {
-              arr[i1, i2] = _innerConverter.Read.Invoke(reader);
+              arr[i1, i2] = _innerConverter.Read(context);
             }
           }
           return (T)(object)arr;
@@ -103,7 +105,7 @@ namespace WrathTools
             {
               for(int i3 = 0; i3 < lengths[2]; i3++)
               {
-                arr[i1, i2, i3] = _innerConverter.Read.Invoke(reader);
+                arr[i1, i2, i3] = _innerConverter.Read(context);
               }
             }
           }
@@ -118,7 +120,7 @@ namespace WrathTools
           {
             for(int i = 0; i < lengths[^1]; i++)
             {
-              arr.SetValue(_innerConverter.Read.Invoke(reader), curr);
+              arr.SetValue(_innerConverter.Read(context), curr);
               curr[^1]++;
             }
             while(d >= 0 && curr[d] >= lengths[d])

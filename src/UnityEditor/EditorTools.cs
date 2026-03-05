@@ -14,7 +14,11 @@ namespace WrathTools.UnityEditor
       string[] assetParts = path.Split('.');
       if(assetParts.Length > 1)
       {
-        UnityDiagnostics.LogError(new Exception("Path contains a period, cannot assure valid folder pathing."));
+        UnityDiagnostics.LogError(
+          new Exception("Path contains a period, cannot assure valid folder pathing."),
+          stackTrace: new(true),
+          id: UnityDiagnostics.DiagnosticID + ".tools.ensure_path_contains_period"
+        );
         return;
       }
       string[] parts = path.Split('/');

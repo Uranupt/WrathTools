@@ -36,14 +36,14 @@ namespace WrathTools
         _serializerName = serializerName;
       }
 
-      public void Read(BinaryReader reader, T instance)
+      public void Read(BinaryReadContext context, T instance)
       {
-        Field.SetValue(instance, Converter.Read.Invoke(reader));
+        Field.SetValue(instance, Converter.Read(context));
       }
 
-      public void Write(BinaryWriter writer, T instance)
+      public void Write(BinaryWriteContext context, T instance)
       {
-        Converter.Write.Invoke(writer, Field.GetValue(instance));
+        Converter.Write(context, Field.GetValue(instance));
       }
 
     }
@@ -76,44 +76,48 @@ namespace WrathTools
       SetMethods(ReadLoop, WriteLoop);
     }
 
-    private void WriteLoop(BinaryWriter writer, T instance)
+    private void WriteLoop(BinaryWriteContext context, T instance)
     {
-      writer.Write(_sortedFields.Count);
+      context.Writer.Write(_sortedFields.Count);
       foreach(FieldConverter field in _sortedFields)
       {
-        writer.Write(field.Field.Name);
-        field.Write(writer, instance); ;
+        context.Writer.Write(field.Field.Name);
+        field.Write(context, instance); ;
       }
     }
 
-    private T ReadLoop(BinaryReader reader)
+    private T ReadLoop(BinaryReadContext context)
     {
       T instance = _creator.Create();
-      int count = reader.ReadInt32();
+      if(IsReferenceType)
+      {
+        context.AddToGraph(instance);
+      }
+      int count = context.Reader.ReadInt32();
       if(count != _sortedFields.Count)
       {
         Diagnostics.LogError(
           new InvalidDataException($"Schema deserialization for Type '{this.Type.Name}' cannot continue, the amount of fields in the" +
           $" provided stream do not match the schema. Ensure the serialized data represents the same version of the Type."),
-          id: "wrath.serialization.schema_misaligned.binary",
+          id: $"{Serialization.DiagnosticID}.schema_misaligned.binary",
           stackTrace: new(true)
         );
         return default;
       }
       for(int i = 0; i < count; i++)
       {
-        string fieldName = reader.ReadString();
+        string fieldName = context.Reader.ReadString();
         if(!_fields.TryGetValue(fieldName, out FieldConverter converter))
         {
           Diagnostics.LogError(
             new InvalidDataException($"Schema deserialization for Type '{this.Type.Name}' cannot continue, missing expected field with name: " +
             $"'{fieldName}. Ensure the serialized data represents the same version of the Type."),
-            id: "wrath.serialization.missing_schema_field.binary",
+            id: $"{Serialization.DiagnosticID}.missing_schema_field.binary",
             stackTrace: new(true)
           );
           return default;
         }
-        converter.Read(reader, instance);
+        converter.Read(context, instance);
       }
       return instance;
     }

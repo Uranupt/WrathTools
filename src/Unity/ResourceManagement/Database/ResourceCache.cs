@@ -31,10 +31,11 @@ namespace WrathTools.Unity.ResourceManagement
       return true;
     }
 
+    //TODO: Should probably avoid using GetType in a potential hot path
     internal static bool TryGetResource(int id, Type type, out ResourceObject resl, bool exactType = true)
     {
       if(!TryGetResource(id, out resl)){ return false; }
-      bool typeMatch = type.TypeMatch(resl.GetType(), exactType);
+      bool typeMatch = exactType ? type == resl.GetType() : type.IsAssignableFrom(resl.GetType());
       if(!typeMatch)
       {
         resl = null;
@@ -61,13 +62,21 @@ namespace WrathTools.Unity.ResourceManagement
         {
           if(!ResourceID.TryGetResourcePath(id, out string path))
           {
-            UnityDiagnostics.LogError(new Exception($"Failed to find path for resource with ID: {id.ToIDString(true)}"));
+            UnityDiagnostics.LogError(
+              new Exception($"Failed to find path for resource with ID: {id.ToIDString(true)}"),
+              stackTrace: new(true),
+              id: ResourceDatabase.DiagnosticID + ".missing_path"
+             );
             return;
           }
           value = Resources.Load<ResourceObject>(path);
           if(value == null)
           {
-            UnityDiagnostics.LogError(new Exception($"Resources.Load returned null at path: {path}"));
+            UnityDiagnostics.LogError(
+              new Exception($"Resources.Load returned null at path: {path}"),
+              stackTrace: new(true),
+              id: ResourceDatabase.DiagnosticID + ".null_resource"
+            );
             return;
           }
           _cache[id] = value;

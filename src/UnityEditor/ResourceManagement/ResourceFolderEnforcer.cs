@@ -67,7 +67,9 @@ namespace WrathTools.UnityEditor.ResourceManagement
           if(pathAnalysis.Library == null)
           {
             UnityDiagnostics.LogWarning($"The ResourceLibrary for the new Collection folder at '{pathAnalysis.FullPath}' could not be found in the Database." +
-              $" New Collection folder will be deleted. If issue persists, Database rebuild is recommended.");
+              $" New Collection folder will be deleted. If issue persists, Database rebuild is recommended.",
+              id: $"warning.{ResourceDatabase.DiagnosticID}.collection_missing_library"
+             );
             TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
             return;
           }
@@ -78,14 +80,20 @@ namespace WrathTools.UnityEditor.ResourceManagement
           }
           else
           {
-            UnityDiagnostics.LogWarning(pathAnalysis.Library.GetIndexOverflowMessage(pathAnalysis.DeepestFolder));
+            UnityDiagnostics.LogWarning(
+              pathAnalysis.Library.GetIndexOverflowMessage(pathAnalysis.DeepestFolder),
+              id: $"warning.{ResourceDatabase.DiagnosticID}.max_collections"
+            );
             TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           }
           break;
         }
         default:
         {
-          UnityDiagnostics.LogWarning($"New folder at '{pathAnalysis.FullPath}' created at an invalid depth. Only Collections (subfolders of Libraries) can be manually created.");
+          UnityDiagnostics.LogWarning(
+            $"New folder at '{pathAnalysis.FullPath}' created at an invalid depth. Only Collections (subfolders of Libraries) can be manually created.",
+            id: $"warning.{ResourceDatabase.DiagnosticID}.invalid_folder_depth"
+          );
           TryWrapper(() => AssetDatabase.DeleteAsset(pathAnalysis.FullPath));
           break;
         }
@@ -101,7 +109,10 @@ namespace WrathTools.UnityEditor.ResourceManagement
         case PathType.Database:
         case PathType.Library:
         {
-          UnityDiagnostics.LogWarning($"Users should not manually delete the Database or Library folder at '{pathAnalysis.FullPath}'");
+          UnityDiagnostics.LogWarning(
+            $"Users should not manually delete the Database or Library folder at '{pathAnalysis.FullPath}'",
+            id: $"warning.{ResourceDatabase.DiagnosticID}.invalid_deletion"
+          );
           return AssetDeleteResult.FailedDelete;
         }
         case PathType.Collection:
@@ -126,8 +137,11 @@ namespace WrathTools.UnityEditor.ResourceManagement
         || oldPathAnalysis.PathType == PathType.Library
         || newPathAnalysis.PathType == PathType.Library)
       {
-        UnityDiagnostics.LogWarning($"Users should not manually move the Database or Library folders. Prevented folder at '{oldPathAnalysis.FullPath}'" +
-          $" from moving to '{newPathAnalysis.FullPath}'");
+        UnityDiagnostics.LogWarning(
+          $"Users should not manually move the Database or Library folders. Prevented folder at '{oldPathAnalysis.FullPath}'" +
+            $" from moving to '{newPathAnalysis.FullPath}'",
+          id: $"warning.{ResourceDatabase.DiagnosticID}.invalid_move.depth"
+        );
         return AssetMoveResult.FailedMove;
       }
 
@@ -139,8 +153,10 @@ namespace WrathTools.UnityEditor.ResourceManagement
 
       if(newPathAnalysis.PathType == PathType.Subcollection)
       {
-        UnityDiagnostics.LogWarning($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
-          $"ResourceCollection folders cannot have subfolders.");
+        UnityDiagnostics.LogWarning(
+          $"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', ResourceCollection folders cannot have subfolders.",
+          id: $"warning.{ResourceDatabase.DiagnosticID}.collection_subfolder"
+        );
         return AssetMoveResult.FailedMove;
       }
       
@@ -166,8 +182,10 @@ namespace WrathTools.UnityEditor.ResourceManagement
         {
           if(oldPathAnalysis.HasSubfolders)
           {
-            UnityDiagnostics.LogWarning($"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', " +
-              $"folder contains subfolders and destination is a ResourceCollection path.");
+            UnityDiagnostics.LogWarning(
+              $"Cannot move folder at '{oldPathAnalysis.FullPath}' to '{newPathAnalysis.FullPath}', folder contains subfolders and destination is a ResourceCollection path.",
+              id: $"warning.{ResourceDatabase.DiagnosticID}.invalid_move.subfolders"
+            );
             return AssetMoveResult.FailedMove;
           }
           if(ResourceDatabase.Instance.AutoUpdate)

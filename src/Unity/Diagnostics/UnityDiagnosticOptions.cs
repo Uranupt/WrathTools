@@ -29,7 +29,7 @@ namespace WrathTools.Unity
     ConsumeAllHandledTypes = ConsumeHandledMessages | ConsumeHandledWarnings | ConsumeHandledErrors,
     ConsumeAll = HandleAll | ConsumeAllHandledTypes,
     LogAndConsumeAll = ConsumeAll | LogAll,
-    Default = Active | LogNativeSources | HandleNativeSources | HandleAllTypes,
+    Default = Active | LogNativeSources | HandleNativeSources | HandleAllTypes
   }
 
   public static class UnityDiagnosticOptionsExtensions

@@ -17,25 +17,25 @@ namespace WrathTools.Unity
       Material material,
       ColliderType colliderType,
       Mesh proxy = null,
-      ColliderComposite amalgam = null
+      ColliderComposite composite = null
     )
     {
       RenderMesh = render;
       this.Material = material;
       this.ColliderType = colliderType;
       ProxyMesh = proxy;
-      CompositePrefab = amalgam;
+      CompositePrefab = composite;
       Validate();
     }
 
-    public WorldFormInfo WithCollider(ColliderType colliderType, Mesh proxy = null, ColliderComposite amalgam = null)
+    public WorldFormInfo WithCollider(ColliderType colliderType, Mesh proxy = null, ColliderComposite composite = null)
     {
       return new WorldFormInfo(
         RenderMesh,
         this.Material,
         colliderType,
         proxy,
-        amalgam
+        composite
       );
     }
 
@@ -65,12 +65,19 @@ namespace WrathTools.Unity
     {
       if(this.ColliderType == ColliderType.ProxyMesh && ProxyMesh == null)
       {
-        Debug.LogWarning("Proxy Mesh Collider type selected, but no proxy mesh provided. Setting type to RenderMesh instead.");
+        UnityDiagnostics.LogWarning(
+          "Proxy Mesh Collider type selected, but no proxy mesh provided. Setting type to RenderMesh instead.",
+          id: WorldForm.DiagnosticID + ".missing_proxy_mesh"
+        );
         this.ColliderType = ColliderType.RenderMesh;
       }
       if(this.ColliderType == ColliderType.Composite && CompositePrefab == null)
       {
-        Debug.LogWarning("Primitive Amalgam Collider type selected, but no amalgam prefab provided. Setting type to RenderMesh instead.");
+
+        UnityDiagnostics.LogWarning(
+          "Composite Collider type selected, but no Composite prefab provided. Setting type to RenderMesh instead.",
+          id: WorldForm.DiagnosticID + ".missing_composite_mesh"
+        );
         this.ColliderType = ColliderType.RenderMesh;
       }
     }

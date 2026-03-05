@@ -11,9 +11,9 @@ namespace WrathTools.Unity
 
     private static readonly Collider[] _colliderHits = new Collider[32];
 
-    [SerializeField] private List<Collider> _colliders = new();
-    private readonly List<Vector3> _colliderOffsets = new();
-    private readonly List<Quaternion> _colliderRotations = new();
+    [SerializeField, HideInInspector] private List<Collider> _colliders = new();
+    private Vector3[] _colliderOffsets = new Vector3[0];
+    private Quaternion[] _colliderRotations = new Quaternion[0];
 
     public Collider[] GetColliderArray() => _colliders.ToArray();
 
@@ -41,11 +41,13 @@ namespace WrathTools.Unity
     public bool CollisionCheckFromPrefab(Vector3 scale, Vector3 position, Quaternion rotation,
       LayerMask layers, params Collider[] toIgnore)
     {
-      if(!ValidityCheck(prefab: true))
+      if(!ValidityCheck(true))
       {
         return true;
       }
-      return false;
+      OnTransformChildrenChanged();
+      int hits = OverlapBoxFromCollectiveBounds(position, rotation, layers);
+      return PenetrationTest(position, rotation, hits, 0f, toIgnore);
     }
 
     public bool CollisionCheckFromPrefab(Vector3 scale, Vector3 position, Quaternion rotation,
@@ -55,7 +57,8 @@ namespace WrathTools.Unity
       {
         return true;
       }
-      return false;
+      int hits = OverlapBoxFromCollectiveBounds(position, rotation, tolerantMask);
+      return PenetrationTest(position, rotation, hits, tolerance, toIgnore);
     }
 
     private int OverlapBoxFromCollectiveBounds(Vector3 position, Quaternion rotation, LayerMask layers)
@@ -80,12 +83,20 @@ namespace WrathTools.Unity
     {
       if(prefab && !gameObject.IsPrefab())
       {
-        Debug.LogError("Cannot perform prefab collision check on an instantiated object. Returning unconditional true.");
+        UnityDiagnostics.LogError(
+          new InvalidOperationException("Cannot perform prefab collision check on an instantiated object. Returning unconditional true."),
+          stackTrace: new(true),
+          id: WorldForm.DiagnosticID + ".invalid_composite_check.prefab"
+        );
         return false;
       }
       if(_colliders.Count == 0)
       {
-        Debug.LogError("Cannot perform collision check on a ColliderComposite with no Colliders.");
+        UnityDiagnostics.LogError(
+          new InvalidOperationException("Cannot perform collision check on a ColliderComposite with no Colliders."),
+          stackTrace: new(true),
+          id: WorldForm.DiagnosticID + ".composite_missing_colliders"
+        );
         return false;
       }
       return true;
@@ -128,11 +139,36 @@ namespace WrathTools.Unity
 
     private void UpdateOffsetsAndRotations()
     {
+      _colliderOffsets = new Vector3[_colliders.Count];
+      _colliderRotations = new Quaternion[_colliders.Count];
       for(int i = 0; i < _colliders.Count; i++)
       {
         _colliderOffsets[i] = transform.InverseTransformPoint(_colliders[i].transform.position);
         _colliderRotations[i] = Quaternion.Inverse(transform.rotation) * _colliders[i].transform.rotation;
       }
+    }
+
+    private void OnEnable()
+    {
+      OnTransformChildrenChanged();
+    }
+
+    private void OnTransformChildrenChanged()
+    {
+      _colliders = new();
+      foreach(Transform child in transform)
+      {
+        if(child.TryGetComponent(out Collider collider))
+        {
+          _colliders.Add(collider);
+        }
+      }
+      UpdateOffsetsAndRotations();
+    }
+
+    private void OnTransformParentChanged()
+    {
+      UpdateOffsetsAndRotations();
     }
 
   }

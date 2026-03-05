@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Xml.Linq;
 
 
 namespace WrathTools
@@ -42,47 +40,47 @@ namespace WrathTools
     public static bool IsBinarySerializable(this object obj, bool buildIfEnumerable = true, string name = null) 
       => TryGetConverter(obj.GetType(), out _, buildIfEnumerable, name);
 
-    public static bool TryWriteAs(this BinaryWriter writer, Type type, object value, bool confirmRuntimeType = true, 
+    public static bool TryWriteAs(this BinaryWriteContext context, Type type, object value, bool confirmRuntimeType = true, 
       bool buildIfEnumerable = true, string name = null)
     {
       if(confirmRuntimeType && value.GetType() != type) { return false; }
       if(TryGetConverter(type, out BinaryConverter converter, buildIfEnumerable, name))
       {
-        converter.Write.Invoke(writer, value);
+        converter.Write(context, value);
         return true;
       }
       return false;
     }
 
-    public static bool TryWriteAs<T>(this BinaryWriter writer, T value, bool buildIfEnumerable = true, string name = null)
+    public static bool TryWriteAs<T>(this BinaryWriteContext context, T value, bool buildIfEnumerable = true, string name = null)
     {
       if(TryGetConverter<T>(out BinaryConverter<T> converter, buildIfEnumerable, name))
       {
-        converter.Write.Invoke(writer, value);
+        converter.Write(context, value);
         return true;
       }
       return false;
     }
 
-    public static bool TryWriteAsRuntime(this BinaryWriter writer, object value, bool buildIfEnumerable = true, string name = null)
-      => TryWriteAs(writer, value.GetType(), value, false, buildIfEnumerable, name);
+    public static bool TryWriteAsRuntime(this BinaryWriteContext context, object value, bool buildIfEnumerable = true, string name = null)
+      => TryWriteAs(context, value.GetType(), value, false, buildIfEnumerable, name);
 
-    public static bool TryReadAs(this BinaryReader reader, Type type, out object value, bool buildIfEnumerable = true, string name = null)
+    public static bool TryReadAs(this BinaryReadContext context, Type type, out object value, bool buildIfEnumerable = true, string name = null)
     {
       if(TryGetConverter(type, out BinaryConverter converter, buildIfEnumerable, name))
       {
-        value = converter.Read.Invoke(reader);
+        value = converter.Read(context);
         return true;
       }
       value = default;
       return false;
     }
 
-    public static bool TryReadAs<T>(this BinaryReader reader, out T value, bool buildIfEnumerable = true, string name = null)
+    public static bool TryReadAs<T>(this BinaryReadContext context, out T value, bool buildIfEnumerable = true, string name = null)
     {
       if(TryGetConverter<T>(out BinaryConverter<T> converter, buildIfEnumerable, name))
       {
-        value = converter.Read.Invoke(reader);
+        value = converter.Read(context);
         return true;
       }
       value = default;
@@ -108,20 +106,20 @@ namespace WrathTools
     public static BinaryConverter GetBinaryConverter(this Type type, bool buildIfEnumerable = true, string name = null) 
       => GetConverter(type, buildIfEnumerable, name);
 
-    public static void WriteAs(this BinaryWriter writer, Type type, object value, bool buildIfEnumerable = true, string name = null) 
-      => GetConverter(type, buildIfEnumerable, name).Write.Invoke(writer, value);
+    public static void WriteAs(this BinaryWriteContext context, Type type, object value, bool buildIfEnumerable = true, string name = null) 
+      => GetConverter(type, buildIfEnumerable, name).Write(context, value);
 
-    public static void WriteAs<T>(this BinaryWriter writer, T value, bool buildIfEnumerable = true, string name = null) 
-      => GetConverter<T>(buildIfEnumerable, name).Write.Invoke(writer, value);
+    public static void WriteAs<T>(this BinaryWriteContext context, T value, bool buildIfEnumerable = true, string name = null) 
+      => GetConverter<T>(buildIfEnumerable, name).Write(context, value);
 
-    public static void WriteAsRuntime(this BinaryWriter writer, object value, bool buildIfEnumerable = true, string name = null) 
-      => WriteAs(writer, value.GetType(), value, buildIfEnumerable, name);
+    public static void WriteAsRuntime(this BinaryWriteContext context, object value, bool buildIfEnumerable = true, string name = null) 
+      => WriteAs(context, value.GetType(), value, buildIfEnumerable, name);
 
-    public static object ReadAs(this BinaryReader reader, Type type, bool buildIfEnumerable = true, string name = null) 
-      => GetConverter(type, buildIfEnumerable, name).Read.Invoke(reader);
+    public static object ReadAs(this BinaryReadContext context, Type type, bool buildIfEnumerable = true, string name = null) 
+      => GetConverter(type, buildIfEnumerable, name).Read(context);
 
-    public static T ReadAs<T>(this BinaryReader reader, bool buildIfEnumerable = true, string name = null) 
-      => GetConverter<T>(buildIfEnumerable, name).Read.Invoke(reader);
+    public static T ReadAs<T>(this BinaryReadContext context, bool buildIfEnumerable = true, string name = null) 
+      => GetConverter<T>(buildIfEnumerable, name).Read(context);
 
   }
 }

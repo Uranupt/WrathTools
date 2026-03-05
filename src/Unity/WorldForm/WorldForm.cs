@@ -4,8 +4,11 @@ using UnityEngine;
 
 namespace WrathTools.Unity
 {
-  public sealed class WorldFormModule
+  public sealed class WorldForm
   {
+
+    public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".world_form";
+
     private Collider _collider;
     private ColliderComposite _composite;
     private MeshFilter _filter;
@@ -17,13 +20,13 @@ namespace WrathTools.Unity
     public Vector3 WorldScale => Parent.transform.lossyScale;
     public Quaternion Rotation => Parent.transform.rotation;
 
-    public WorldFormModule(MonoBehaviour parent)
+    public WorldForm(MonoBehaviour parent)
     {
       Parent = parent;
       InitMeshComponents();
     }
 
-    public WorldFormModule(MonoBehaviour parent, WorldFormInfo formInfo)
+    public WorldForm(MonoBehaviour parent, WorldFormInfo formInfo)
     {
       Parent = parent;
       InitMeshComponents();
@@ -41,7 +44,12 @@ namespace WrathTools.Unity
     {
       if(FormInfo == default)
       {
-        throw new InvalidOperationException("Cannot do a collision check without assigned WorldFormInfo.");
+        UnityDiagnostics.LogError(
+          new InvalidOperationException("Cannot do a collision check without assigned WorldFormInfo."),
+          stackTrace: new(true),
+          id: DiagnosticID + ".missing_info.collision_check"
+        );
+        return true;
       }
       if(FormInfo.ColliderType == ColliderType.Composite)
       {
@@ -58,7 +66,12 @@ namespace WrathTools.Unity
     {
       if(FormInfo == default)
       {
-        throw new InvalidOperationException("Cannot do a collision check without assigned WorldFormInfo.");
+        UnityDiagnostics.LogError(
+          new InvalidOperationException("Cannot do a collision check without assigned WorldFormInfo."),
+          stackTrace: new(true),
+          id: DiagnosticID + ".missing_info.collision_check"
+        );
+        return true;
       }
       if(FormInfo.ColliderType == ColliderType.Composite)
       {
@@ -99,7 +112,11 @@ namespace WrathTools.Unity
         }
         default:
         {
-          Debug.LogError("Invalid ColliderType");
+          UnityDiagnostics.LogError(
+            new Exception("Invalid ColliderType value provided to WorldForm"),
+            stackTrace: new(true),
+            id: DiagnosticID + "invalid_collidertype"
+          );
           return true;
         }
       }
@@ -137,7 +154,11 @@ namespace WrathTools.Unity
         }
         default:
         {
-          Debug.LogError("Invalid ColliderType");
+          UnityDiagnostics.LogError(
+           new Exception("Invalid ColliderType value provided to WorldForm"),
+           stackTrace: new(true),
+           id: DiagnosticID + "invalid_collidertype"
+         );
           return true;
         }
       }

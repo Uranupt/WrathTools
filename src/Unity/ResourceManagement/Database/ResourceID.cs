@@ -31,13 +31,15 @@ namespace WrathTools.Unity.ResourceManagement
     public static bool IsBuildType<T>(int id, bool exactType = true) => IsBuildType(id, typeof(T), exactType);
     public static bool IsBuildType(int id, Type buildType, bool exactType = true)
     {
-      return TryGetBuildType(id, out Type idType) && buildType.TypeMatch(idType, exactType);
+      return TryGetBuildType(id, out Type idType)
+        && exactType ? buildType == idType : buildType.IsAssignableFrom(idType);
     }
 
     public static bool IsResourceType<T>(int id, bool exactType = true) where T : ResourceObject => IsResourceType(id, typeof(T), exactType);
     public static bool IsResourceType(int id, Type resourceType, bool exactType = true)
     {
-      return TryGetResourceType(id, out Type idType) && resourceType.TypeMatch(idType, exactType);
+      return TryGetResourceType(id, out Type idType)
+        && exactType ? resourceType == idType : resourceType.IsAssignableFrom(idType);
     }
 
     public static Type GetResourceType(int id) => TryGetResourceType(id, out Type resl) ? resl : null;

@@ -93,7 +93,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceObject with the ID '{id.ToIDString(true)}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".missing_id.resource"
         );
       }
       return peek;
@@ -105,7 +106,8 @@ namespace WrathTools.Unity.ResourceManagement
       {
         UnityDiagnostics.LogError(
           new Exception($"No ResourceObject with the name '{name}' was found in the ResourceCollection '{Library.Name}/{Name}'"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: ResourceDatabase.DiagnosticID + ".missing_name.resource"
         );
       }
       return peek;
@@ -202,8 +204,11 @@ namespace WrathTools.Unity.ResourceManagement
       }
       else
       {
-        UnityDiagnostics.LogError(new Exception($"Cannot log ResourceObject with name '{resource.name}' in Collection '{Library.Name}/{Name}'" 
-          + $", it already has {ResourceID.MaxResources} existing indices. Consider a new Collection, or rebuilding the Database to clear removed Resource IDs."));
+        UnityDiagnostics.LogError(
+          new Exception($"Cannot log ResourceObject with name '{resource.name}' in Collection '{Library.Name}/{Name}'" 
+          + $", it already has {ResourceID.MaxResources} existing indices. Consider a new Collection, or rebuilding the Database to clear removed Resource IDs."),
+          id: ResourceDatabase.DiagnosticID + ".max_resources"
+         );
       }
     }
 

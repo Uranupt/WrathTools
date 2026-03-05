@@ -46,7 +46,8 @@ namespace WrathTools.Unity
       {
         UnityDiagnostics.LogError(
           new Exception("Cannot create an instance of a null, destroyed, or moved GameObject"),
-          stackTrace: new(true)
+          stackTrace: new(true),
+          id: UnityDiagnostics.DiagnosticID + ".temp_objects.invalid_target.component"
         );
       }
       return resl;

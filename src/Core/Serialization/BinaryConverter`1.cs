@@ -8,8 +8,8 @@ namespace WrathTools
   {
 
 
-    public new Func<BinaryReader, T> Read { get; private set; }
-    public new Action<BinaryWriter, T> Write { get; private set; }
+    private Func<BinaryReadContext, T> _read;
+    private Action<BinaryWriteContext, T> _write;
     public override Type Type => typeof(T);
 
     protected BinaryConverter(string name) : base(name)
@@ -17,15 +17,32 @@ namespace WrathTools
       
     }
 
-    internal BinaryConverter(string name, Func<BinaryReader, T> read, Action<BinaryWriter, T> write) : base(name)
+    internal BinaryConverter(string name, Func<BinaryReadContext, T> read, Action<BinaryWriteContext, T> write) : base(name)
     {
       SetMethods(read, write);
     }
 
-    protected void SetMethods(Func<BinaryReader, T> read, Action<BinaryWriter, T> write)
+    public void Write(BinaryWriteContext context, T instance)
     {
-      Read = read;
-      Write = write;
+      if(IsReferenceType)
+      {
+        context.WriteAsReference(instance, _write);
+      }
+      else
+      {
+        _write.Invoke(context, instance);
+      }
+    }
+
+    public new T Read(BinaryReadContext context)
+    {
+      return IsReferenceType ? context.ReadAsReference(_read) : _read.Invoke(context);
+    }
+
+    protected void SetMethods(Func<BinaryReadContext, T> read, Action<BinaryWriteContext, T> write)
+    {
+      _read = read;
+      _write = write;
       base.SetMethods(r => read.Invoke(r), (w, v) => write.Invoke(w, (T)v));
     }
 

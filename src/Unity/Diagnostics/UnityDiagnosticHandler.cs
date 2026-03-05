@@ -19,7 +19,8 @@ namespace WrathTools.Unity
     public static DiagnosticResponse HandleDiagnostic(DiagnosticContext context, bool isHandled)
     {
       if(!UnityDiagnostics.Options.Has(UnityDiagnosticOptions.Active)
-        || (isHandled && UnityDiagnostics.Options.Has(UnityDiagnosticOptions.IgnoreHandled)))
+        || (isHandled && UnityDiagnostics.Options.Has(UnityDiagnosticOptions.IgnoreHandled))
+        || UnityDiagnostics.IsIdIgnored(context.ID))
       {
         return DiagnosticResponse.Ignored;
       }
