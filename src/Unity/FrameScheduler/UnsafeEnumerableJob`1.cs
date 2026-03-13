@@ -16,22 +16,21 @@ namespace WrathTools.Unity
     private readonly IEnumerable<T> _enumerable;
     private IEnumerator<T> _enumerator;
     private readonly Action<T> _onWork;
-    private readonly Action _onDone;
     private readonly Func<T, bool> _onWorkFunc;
     private readonly bool _useFunc = false;
 
-    public UnsafeEnumerableJob(IEnumerable<T> enumerable, Action<T> onWork, Action onDone = null)
+    public event Action OnDone;
+
+    public UnsafeEnumerableJob(IEnumerable<T> enumerable, Action<T> onWork)
     {
       _enumerable = enumerable;
       _onWork = onWork;
-      _onDone = onDone;
     }
 
-    public UnsafeEnumerableJob(IEnumerable<T> enumerable, Func<T, bool> onWork, Action onDone = null)
+    public UnsafeEnumerableJob(IEnumerable<T> enumerable, Func<T, bool> onWork)
     {
       _enumerable = enumerable;
       _onWorkFunc = onWork;
-      _onDone = onDone;
       _useFunc = true;
     }
 
@@ -59,7 +58,7 @@ namespace WrathTools.Unity
     public void FinishWork()
     {
       _enumerator?.Dispose();
-      _onDone?.Invoke();
+      OnDone?.Invoke();
     }
 
   }

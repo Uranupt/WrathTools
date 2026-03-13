@@ -21,6 +21,8 @@ namespace WrathTools.UnityEditor
 
     private static readonly Dictionary<Type, SettingsObject> _settingsCache = new();
 
+    public static bool Initialized { get; private set; } = false;
+
     [MenuItem("WrathTools/Resolve Duplicate Settings")]
     public static void ResolveDuplicateSettings()
     {
@@ -65,8 +67,10 @@ namespace WrathTools.UnityEditor
     }
 
     [InitializeOnLoadMethod]
-    private static void Initialize()
+    public static void Initialize()
     {
+      if(Initialized) { return; }
+      Initialized = true;
       SettingsObject.GetSettings = GetSettingsOfType;
       EditorTools.EnsurePathExists($"Assets/Resources/{SettingsObject.SettingsPath}");
       BuildSettingsCache();

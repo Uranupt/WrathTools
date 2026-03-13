@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 
 namespace WrathTools
@@ -77,36 +79,6 @@ namespace WrathTools
           (includedTypes != null && includedTypes.Contains(type));
       }
       return IsBaseTypeSerializable(iEnumTypes.First().GenericTypeArguments[0], includedTypes);
-    }
-
-    internal static bool TrySelectSerializerMethods(Type declaringType, Type targetedType, out MethodInfo read, out MethodInfo write)
-    {
-      read = null;
-      write = null;
-      foreach(MethodInfo method in declaringType.GetMethods())
-      {
-        if(method.Name == "Read")
-        {
-          ParameterInfo[] parameters = method.GetParameters();
-          if(parameters.Length == 1
-            && parameters[0].ParameterType == typeof(BinaryReadContext)
-            && method.ReturnType == targetedType)
-          {
-            read = method;
-          }
-        }
-        else if(method.Name == "Write")
-        {
-          ParameterInfo[] parameters = method.GetParameters();
-          if(parameters.Length == 2
-            && parameters[0].ParameterType == typeof(BinaryWriteContext)
-            && parameters[1].ParameterType == targetedType)
-          {
-            write = method;
-          }
-        }
-      }
-      return read != null && write != null;
     }
 
     private static void Initialize()
@@ -195,13 +167,14 @@ namespace WrathTools
             continue;
           }
 
-          if(!TrySelectSerializerMethods(info.DeclaringType, info.TargetedType, out MethodInfo read, out MethodInfo write))
+          BinarySerializerMethodSelector selector = new(info.DeclaringType, info.TargetedType);
+          if(!selector.HasSync && !selector.HasAsync)
           {
             Diagnostics.LogWarning($"The Type '{info.DeclaringType.Name}' marked with a Binary Serialization Attribute for the Type '{info.TargetedType.Name}' " +
-              $"is missing one or both of the required Read and Write methods. Read Missing: {read == null}, Write Missing: {write == null} ");
+              $"is missing one or both of the required Read and Write methods.");
             continue;
           }
-          BinaryConverter converter = (BinaryConverter)ManualConverterBuilder.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, read, write });
+          BinaryConverter converter = (BinaryConverter)ManualConverterBuilder.MakeGenericMethod(info.TargetedType).Invoke(null, new object[] { info.Name, selector });
           GetOrBuildCollection(info.TargetedType).AddConverter(converter);
 
         }
@@ -226,13 +199,29 @@ namespace WrathTools
     }
 
 
-    private static BinaryConverter BuildManualConverter<T>(string name, MethodInfo readInfo, MethodInfo writeInfo)
+    private static BinaryConverter BuildManualConverter<T>(string name, BinarySerializerMethodSelector selector)
     {
-      return new BinaryConverter<T>(
-        name,
-        DelegateBuilder.Func<BinaryReadContext, T>(readInfo),
-        DelegateBuilder.Action<BinaryWriteContext, T>(writeInfo)
-      );
+      return (selector.HasSync, selector.HasAsync) switch
+      {
+        (true, true) => new BinaryConverter<T>(
+          name,
+          DelegateBuilder.Func<BinaryReadContext, T>(selector.Read),
+          DelegateBuilder.Action<BinaryWriteContext, T>(selector.Write),
+          DelegateBuilder.Func<BinaryReadContext, Task<T>>(selector.ReadAsync),
+          DelegateBuilder.Func<BinaryWriteContext, T, Task>(selector.WriteAsync)
+        ),
+        (true, false) => new BinaryConverter<T>(
+          name,
+          DelegateBuilder.Func<BinaryReadContext, T>(selector.Read),
+          DelegateBuilder.Action<BinaryWriteContext, T>(selector.Write)
+        ),
+        (false, true) => new BinaryConverter<T>(
+          name,
+          DelegateBuilder.Func<BinaryReadContext, Task<T>>(selector.ReadAsync),
+          DelegateBuilder.Func<BinaryWriteContext, T, Task>(selector.WriteAsync)
+        ),
+        (false, false) => null
+      };
     }
 
     private static BinaryConverter BuildSchemaConverter<T>(string name, SerializationBehavior behavior, HashSet<Type> autoTypes)

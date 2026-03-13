@@ -18,7 +18,7 @@ namespace WrathTools.Unity
 
     public static DiagnosticResponse HandleDiagnostic(DiagnosticContext context, bool isHandled)
     {
-      if(!UnityDiagnostics.Options.Has(UnityDiagnosticOptions.Active)
+      if(!UnityDiagnostics.Active
         || (isHandled && UnityDiagnostics.Options.Has(UnityDiagnosticOptions.IgnoreHandled))
         || UnityDiagnostics.IsIdIgnored(context.ID))
       {
@@ -54,7 +54,8 @@ namespace WrathTools.Unity
       {
         DiagnosticType.Message => Debug.Log,
         DiagnosticType.Warning => Debug.LogWarning,
-        DiagnosticType.Error => Debug.LogError
+        DiagnosticType.Error => Debug.LogError,
+        _ => null
       };
       log?.Invoke(message);
     }
@@ -76,14 +77,16 @@ namespace WrathTools.Unity
       {
         DiagnosticType.Message => UnityDiagnosticOptions.HandleMessages,
         DiagnosticType.Warning => UnityDiagnosticOptions.HandleWarnings,
-        DiagnosticType.Error => UnityDiagnosticOptions.HandleErrors
+        DiagnosticType.Error => UnityDiagnosticOptions.HandleErrors,
+        _ => UnityDiagnosticOptions.None
       };
 
     private static UnityDiagnosticOptions GetHandleOptions(SourceType source) => source switch
       {
         SourceType.Unity => UnityDiagnosticOptions.None,
         SourceType.Native => UnityDiagnosticOptions.HandleNativeSources,
-        SourceType.Other => UnityDiagnosticOptions.HandleOtherSources
+        SourceType.Other => UnityDiagnosticOptions.HandleOtherSources,
+        _ => UnityDiagnosticOptions.None
       };
 
     private static UnityDiagnosticOptions GetHandleOptions(DiagnosticType type, SourceType source) => GetHandleOptions(type) | GetHandleOptions(source);
@@ -92,7 +95,8 @@ namespace WrathTools.Unity
       {
         DiagnosticType.Message => UnityDiagnosticOptions.ConsumeHandledMessages,
         DiagnosticType.Warning => UnityDiagnosticOptions.ConsumeHandledWarnings,
-        DiagnosticType.Error => UnityDiagnosticOptions.ConsumeHandledErrors
+        DiagnosticType.Error => UnityDiagnosticOptions.ConsumeHandledErrors,
+        _ => UnityDiagnosticOptions.None
       };
 
   }

@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Threading.Tasks;
 
 namespace WrathTools
 {
@@ -115,11 +115,26 @@ namespace WrathTools
     public static void WriteAsRuntime(this BinaryWriteContext context, object value, bool buildIfEnumerable = true, string name = null) 
       => WriteAs(context, value.GetType(), value, buildIfEnumerable, name);
 
+    public static Task WriteAsAsync(this BinaryWriteContext context, Type type, object value, bool buildIfEnumerable = true, string name = null)
+      => GetConverter(type, buildIfEnumerable, name).WriteAsync(context, value);
+
+    public static Task WriteAsAsync<T>(this BinaryWriteContext context, T value, bool buildIfEnumerable = true, string name = null)
+      => GetConverter<T>(buildIfEnumerable, name).WriteAsync(context, value);
+
+    public static Task WriteAsRuntimeAsync(this BinaryWriteContext context, object value, bool buildIfEnumerable = true, string name = null)
+      => WriteAsAsync(context, value.GetType(), value, buildIfEnumerable, name);
+
     public static object ReadAs(this BinaryReadContext context, Type type, bool buildIfEnumerable = true, string name = null) 
       => GetConverter(type, buildIfEnumerable, name).Read(context);
 
     public static T ReadAs<T>(this BinaryReadContext context, bool buildIfEnumerable = true, string name = null) 
       => GetConverter<T>(buildIfEnumerable, name).Read(context);
+
+    public static Task<object> ReadAsAsync(this BinaryReadContext context, Type type, bool buildIfEnumerable = true, string name = null)
+      => GetConverter(type, buildIfEnumerable, name).ReadAsync(context);
+
+    public static Task<T> ReadAsAsync<T>(this BinaryReadContext context, bool buildIfEnumerable = true, string name = null)
+      => GetConverter<T>(buildIfEnumerable, name).ReadAsync(context);
 
   }
 }

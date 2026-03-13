@@ -87,19 +87,17 @@ namespace WrathTools
           return true;
         }
       }
-
-      if(!BinarySerialization.TrySelectSerializerMethods(closedDeclaringType, closedType, out MethodInfo read, out MethodInfo write))
+      BinarySerializerMethodSelector selector = new(closedDeclaringType, closedType);
+      if(!selector.HasSync && !selector.HasAsync)
       {
         Diagnostics.LogWarning(
-          $"The Type '{closedDeclaringType.Name}' is missing the required Read and Write methods to satisfy BinarySerialization for" +
-          $" the Type '{closedType.Name}'. Read: {read != null}, Write: {write != null}",
+          $"The Type '{closedDeclaringType.Name}' is missing the required Read and Write methods to satisfy BinarySerialization for the Type '{closedType.Name}'.",
           id: $"{Serialization.DiagnosticID}.factory_missing_methods.binary"
         );
         converter = null;
         return false;
       }
-      converter = (BinaryConverter)BinarySerialization.ManualConverterBuilder
-        .MakeGenericMethod(closedType).Invoke(null, new object[] { template.Name, read, write });
+      converter = (BinaryConverter)BinarySerialization.ManualConverterBuilder.MakeGenericMethod(closedType).Invoke(null, new object[] { template.Name, selector });
       return true;
     }
 

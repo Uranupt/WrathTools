@@ -3,7 +3,7 @@ using System;
 
 namespace WrathTools.Unity.ResourceManagement
 {
-  public abstract class ResourceObject<T> : ResourceObject where T : class
+  public abstract class ResourceObject<T> : ResourceObject, IResourceObject<T> where T : class
   {
 
     public sealed override Type BuildType => typeof(T);

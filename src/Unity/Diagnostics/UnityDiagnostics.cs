@@ -10,6 +10,8 @@ namespace WrathTools.Unity
   {
 
     public static UnityDiagnosticOptions Options = UnityDiagnosticOptions.Default;
+    public static bool Active = true;
+
     public static string DiagnosticID = "wrath.unity";
 
     /// <summary> 

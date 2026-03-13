@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 
 namespace WrathTools
@@ -41,9 +42,19 @@ namespace WrathTools
         Field.SetValue(instance, Converter.Read(context));
       }
 
+      public async Task ReadAsync(BinaryReadContext context, T instance)
+      {
+        Field.SetValue(instance, await Converter.ReadAsync(context));
+      }
+
       public void Write(BinaryWriteContext context, T instance)
       {
         Converter.Write(context, Field.GetValue(instance));
+      }
+
+      public async Task WriteAsync(BinaryWriteContext context, T instance)
+      {
+        await Converter.WriteAsync(context, Field.GetValue(instance));
       }
 
     }
@@ -74,6 +85,7 @@ namespace WrathTools
       }
       _sortedFields.Sort((x, y) => x.Field.Name.CompareTo(y.Field.Name));
       SetMethods(ReadLoop, WriteLoop);
+      SetAsyncMethods(ReadLoopAsync, WriteLoopAsync);
     }
 
     private void WriteLoop(BinaryWriteContext context, T instance)
@@ -83,6 +95,16 @@ namespace WrathTools
       {
         context.Writer.Write(field.Field.Name);
         field.Write(context, instance); ;
+      }
+    }
+
+    private async Task WriteLoopAsync(BinaryWriteContext context, T instance)
+    {
+      context.Writer.Write(_sortedFields.Count);
+      foreach(FieldConverter field in _sortedFields)
+      {
+        context.Writer.Write(field.Field.Name);
+        await field.WriteAsync(context, instance);
       }
     }
 
@@ -118,6 +140,42 @@ namespace WrathTools
           return default;
         }
         converter.Read(context, instance);
+      }
+      return instance;
+    }
+
+    private async Task<T> ReadLoopAsync(BinaryReadContext context)
+    {
+      T instance = _creator.Create();
+      if(IsReferenceType)
+      {
+        context.AddToGraph(instance);
+      }
+      int count = context.Reader.ReadInt32();
+      if(count != _sortedFields.Count)
+      {
+        Diagnostics.LogError(
+          new InvalidDataException($"Schema deserialization for Type '{this.Type.Name}' cannot continue, the amount of fields in the" +
+          $" provided stream do not match the schema. Ensure the serialized data represents the same version of the Type."),
+          id: $"{Serialization.DiagnosticID}.schema_misaligned.binary",
+          stackTrace: new(true)
+        );
+        return default;
+      }
+      for(int i = 0; i < count; i++)
+      {
+        string fieldName = context.Reader.ReadString();
+        if(!_fields.TryGetValue(fieldName, out FieldConverter converter))
+        {
+          Diagnostics.LogError(
+            new InvalidDataException($"Schema deserialization for Type '{this.Type.Name}' cannot continue, missing expected field with name: " +
+            $"'{fieldName}. Ensure the serialized data represents the same version of the Type."),
+            id: $"{Serialization.DiagnosticID}.missing_schema_field.binary",
+            stackTrace: new(true)
+          );
+          return default;
+        }
+        await converter.ReadAsync(context, instance);
       }
       return instance;
     }

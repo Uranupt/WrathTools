@@ -11,33 +11,30 @@ namespace WrathTools.Unity
     private readonly Action<T> _onWork;
     private readonly Func<T, bool> _onWorkFunc;
     private readonly bool _useFunc = false;
-    private readonly Action _onDone;
     private readonly Func<T, bool> _predicate;
+
+    public event Action OnDone;
 
     public SeekItemJob(
       IEnumerable<T> enumerable,
       Action<T> onWork,
-      Func<T, bool> predicate,
-      Action onDone = null
+      Func<T, bool> predicate
     )
     {
       _enumerable = enumerable;
       _onWork = onWork;
       _predicate = predicate;
-      _onDone = onDone;
     }
 
     public SeekItemJob(
       IEnumerable<T> enumerable,
       Func<T, bool> onWork,
-      Func<T, bool> predicate,
-      Action onDone = null
+      Func<T, bool> predicate
     )
     {
       _enumerable = enumerable;
       _onWorkFunc = onWork;
       _predicate = predicate;
-      _onDone = onDone;
       _useFunc = true;
     }
 
@@ -66,7 +63,7 @@ namespace WrathTools.Unity
 
     public void FinishWork()
     {
-      _onDone?.Invoke();
+      OnDone?.Invoke();
     }
 
   }

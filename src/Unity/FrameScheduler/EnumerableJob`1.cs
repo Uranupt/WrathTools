@@ -15,21 +15,20 @@ namespace WrathTools.Unity
     private IEnumerator<T> _enumerator;
     private readonly Action<T> _onWork;
     private readonly Func<T, bool> _onWorkFunc;
-    private readonly Action _onDone;
     private readonly bool _useFunc = false;
 
-    public EnumerableJob(IEnumerable<T> enumerable, Action<T> onWork, Action onDone = null)
+    public event Action OnDone;
+
+    public EnumerableJob(IEnumerable<T> enumerable, Action<T> onWork)
     {
       _list = new List<T>(enumerable);
       _onWork = onWork;
-      _onDone = onDone;
     }
 
-    public EnumerableJob(IEnumerable<T> enumerable, Func<T, bool> onWork, Action onDone = null)
+    public EnumerableJob(IEnumerable<T> enumerable, Func<T, bool> onWork)
     {
       _list = new List<T>(enumerable);
       _onWorkFunc = onWork;
-      _onDone = onDone;
       _useFunc = true;
     }
 
@@ -57,7 +56,7 @@ namespace WrathTools.Unity
     public void FinishWork()
     {
       _enumerator?.Dispose();
-      _onDone?.Invoke();
+      OnDone?.Invoke();
     }
 
   }

@@ -27,6 +27,9 @@ namespace WrathTools.UnityEditor.ResourceManagement
     [InitializeOnLoadMethod]
     private static void Initialize()
     {
+      //TODO: Central static class to declare initialize dependencies
+      ResourceFolderEnforcer.Initialize();
+      SettingsObjectEditorHandler.Initialize();
       ResourceObject.ResourceIDChanged += OnResourceIDChanged;
       ResourceObject.ResourceValidated += OnResourceValidate;
     }

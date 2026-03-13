@@ -23,7 +23,6 @@ namespace WrathTools
     {
       if(_running) { return; }
       _running = true;
-      List<Exception> exceptions = new();
       while(_queue.Count > 0)
       {
         Func<Task> task = _queue.Dequeue();

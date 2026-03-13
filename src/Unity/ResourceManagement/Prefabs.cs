@@ -7,7 +7,7 @@ namespace WrathTools.Unity.ResourceManagement
   public class Prefabs : SettingsObject<Prefabs>
   {
 
-		public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".prefabs";
+		public static new string DiagnosticID => UnityDiagnostics.DiagnosticID + ".prefabs";
 
     public override string DisplayName => "Prefabs";
     public override string CategoryName => "Resource Management";

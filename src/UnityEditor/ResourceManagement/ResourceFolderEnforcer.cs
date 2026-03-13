@@ -229,8 +229,7 @@ namespace WrathTools.UnityEditor.ResourceManagement
       TryWrapper(() => EditorTools.EnsurePathExists(ResourceDatabase.AssetPath));
     }
 
-    [InitializeOnLoadMethod]
-    private static void Initialize()
+    internal static void Initialize()
     {
       ResourceLibrary.GetFolders = GetFolders;
       ResourceDatabase.LibraryRemoved += OnLibraryRemoved;

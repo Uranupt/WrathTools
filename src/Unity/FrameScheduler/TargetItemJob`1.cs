@@ -10,20 +10,19 @@ namespace WrathTools.Unity
     private readonly OverflowOption _overflow;
     private readonly IEnumerable<T> _enumerable;
     private readonly Func<T, bool> _onWork;
-    private readonly Action _onDone;
     private readonly int _steps;
+
+    public event Action OnDone;
 
     public TargetItemJob(
       IEnumerable<T> enumerable,
       Func<T, bool> onWork,
-      Action onDone = null,
       int steps = 1,
       OverflowOption overflow = OverflowOption.EndWork
     )
     {
       _enumerable = enumerable;
       _onWork = onWork;
-      _onDone = onDone;
       _steps = Math.Max(steps, 0);
       _overflow = overflow;
     }
@@ -77,7 +76,7 @@ namespace WrathTools.Unity
 
     public void FinishWork()
     {
-      _onDone?.Invoke();
+      OnDone?.Invoke();
     }
 
   }

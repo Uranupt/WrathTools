@@ -14,13 +14,13 @@ namespace WrathTools.Unity.ResourceManagement
     public static string AssetPath => "Assets/Resources/" + Instance._folder; 
     public static string ResourcePath => Instance._folder;
     public static string DumpPath => "Assets/ResourceDump";
-    public static string DiagnosticID => UnityDiagnostics.DiagnosticID + ".resource_database";
+    public static new string DiagnosticID => UnityDiagnostics.DiagnosticID + ".resource_database";
 
     public static event Action<ResourceLibrary> LibraryRemoved;
     public static event Action AutoUpdateTurnedOn;
 
     [SerializeField, HideInInspector] private string _folder = "ResourceDatabase"; //TODO: Move this to a Setting users can change and set up migration when it does
-    [SerializeField, HideInInspector] private List<ResourceLibrary> _libraries = new();
+    [SerializeField, ReadOnly] private List<ResourceLibrary> _libraries = new();
 
     [SerializeField, HideInInspector] private bool _lastAutoUpdate = true;
 
@@ -38,7 +38,7 @@ namespace WrathTools.Unity.ResourceManagement
     public bool WarnWhenUpdateIsOff { get; private set; } = true;
 
     [field: SerializeField, Tooltip("The default location for writing the text file contents of the Database")] 
-    public string ContentFileWritePath { get; private set; } = Application.persistentDataPath;
+    public string ContentFileWritePath { get; private set; }
 
     public ResourceLibrary this[int id] => GetLibrary(id);
     public ResourceLibrary this[string name] => GetLibrary(name);

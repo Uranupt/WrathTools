@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using System;
+using System.Threading.Tasks;
 
 
 namespace WrathTools.Unity
@@ -10,8 +12,14 @@ namespace WrathTools.Unity
 
     public interface IJob
     {
+      public event Action OnDone;
       public bool DoWork();
       public void FinishWork();
+    }
+
+    public interface IJob<T> : IJob
+    {
+      public new event Action<T> OnDone;
     }
 
     private static FrameScheduler _instance;
@@ -33,6 +41,22 @@ namespace WrathTools.Unity
     private readonly List<IJob> _jobs = new();
 
     public static void Schedule(IJob job) => Instance.SchedulePrivate(job);
+
+    public static Task AwaitJob(IJob job)
+    {
+      TaskCompletionSource<object> taskSource = new();
+      job.OnDone += () => taskSource.SetResult(null);
+      Instance.SchedulePrivate(job);
+      return taskSource.Task;
+    }
+
+    public static Task<T> AwaitJob<T>(IJob<T> job)
+    {
+      TaskCompletionSource<T> taskSource = new();
+      job.OnDone += (v) => taskSource.SetResult(v);
+      Instance.SchedulePrivate(job);
+      return taskSource.Task;
+    }
 
     private void Awake()
     {

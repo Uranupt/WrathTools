@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace WrathTools.Unity.ResourceManagement
 {
-  public sealed class ResourceHandle<T> : ResourceHandle where T : ResourceObject
+  public sealed class ResourceHandle<T> : ResourceHandle where T : class, IResourceObject
   {
 
     public ResourceHandle(int id, bool exactType = true) 
@@ -13,7 +13,7 @@ namespace WrathTools.Unity.ResourceManagement
 
     }
 
-    public new T Resource => (T)base.Resource;
+    public new T Resource => base.Resource as T;
 
   }
 }

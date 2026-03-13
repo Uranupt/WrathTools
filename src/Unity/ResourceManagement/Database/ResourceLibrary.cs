@@ -222,6 +222,11 @@ namespace WrathTools.Unity.ResourceManagement
 
     internal void Refresh()
     {
+      if(GetFolders == null || ResourceType == null)
+      {
+        UnityDiagnostics.LogMessage($"GetFolders null: {GetFolders == null}, ResourceType null: {ResourceType == null}");
+        return;
+      }
       string[] folders = GetFolders.Invoke(ResourceType);
       HashSet<string> extantCollections = new();
       for(int i = 0; i < _collections.Count; i++)

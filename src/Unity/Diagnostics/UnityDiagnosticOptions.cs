@@ -7,18 +7,17 @@ namespace WrathTools.Unity
   public enum UnityDiagnosticOptions
   { 
     None = 0,
-    Active = 1,
-    IgnoreHandled = 1 << 1,
-    LogNativeSources = 1 << 2,
-    LogOtherSources = 1 << 3,
-    HandleNativeSources = 1 << 4,
-    HandleOtherSources = 1 << 5,
-    HandleMessages = 1 << 6,
-    HandleWarnings = 1 << 7,
-    HandleErrors = 1 << 8,
-    ConsumeHandledMessages = 1 << 9,
-    ConsumeHandledWarnings = 1 << 10,
-    ConsumeHandledErrors = 1 << 11,
+    IgnoreHandled = 1,
+    LogNativeSources = 1 << 1,
+    LogOtherSources = 1 << 2,
+    HandleNativeSources = 1 << 3,
+    HandleOtherSources = 1 << 4,
+    HandleMessages = 1 << 5,
+    HandleWarnings = 1 << 6,
+    HandleErrors = 1 << 7,
+    ConsumeHandledMessages = 1 << 8,
+    ConsumeHandledWarnings = 1 << 9,
+    ConsumeHandledErrors = 1 << 10,
     HandleAllTypes = HandleMessages | HandleWarnings | HandleErrors,
     HandleAllSources = HandleNativeSources | HandleOtherSources,
     HandleAll = HandleAllTypes | HandleAllSources,
@@ -29,7 +28,7 @@ namespace WrathTools.Unity
     ConsumeAllHandledTypes = ConsumeHandledMessages | ConsumeHandledWarnings | ConsumeHandledErrors,
     ConsumeAll = HandleAll | ConsumeAllHandledTypes,
     LogAndConsumeAll = ConsumeAll | LogAll,
-    Default = Active | LogNativeSources | HandleNativeSources | HandleAllTypes
+    Default = LogNativeSources | HandleNativeSources | HandleAllTypes
   }
 
   public static class UnityDiagnosticOptionsExtensions
